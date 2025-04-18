@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Колесо Фортуны</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+        }
+        canvas {
+            border: 2px solid #333;
+            border-radius: 50%;
+        }
+        .firework-particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: firework-burst 1.5s ease-out forwards;
+        }
+        @keyframes firework-burst {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+        .digital-timer {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            background-color: #2d2d2d;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .modal {
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .winner-message {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .winner-message-hidden {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const Wheel = ({ participants, winner, spinning, rotation, canvasSize }) => {
+            const canvasRef = useRef(null);
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeead', '#d4a5a5'];
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = canvas.width / 2 - 10;
+                const arc = 2 * Math.PI / (participants.length || 1);
+                const fontSize = canvasSize < 300 ? 8 : 12;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate((rotation * Math.PI) / 180);
+                ctx.translate(-centerX, -centerY);
+
+                participants.forEach((participant, i) => {
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, i * arc, (i + 1) * arc);
+                    ctx.lineTo(centerX, centerY);
+                    ctx.fillStyle = colors[i % colors.length];
+                    ctx.fill();
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(i * arc + arc / 2);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${fontSize}px Arial`;
+                    ctx.fillText(participant || 'Пусто', radius / 2, 0);
+                    ctx.restore();
+                });
+
+                ctx.restore();
+
+                // Draw pointer
+                ctx.beginPath();
+                ctx.moveTo(canvas.width - 12, centerY - 6);
+                ctx.lineTo(canvas.width, centerY);
+                ctx.lineTo(canvas.width - 12, centerY + 6);
+                ctx.fillStyle = '#ffd700';
+                ctx.fill();
+            }, [participants, spinning, rotation, canvasSize]);
+
+            return <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto"></canvas>;
+        };
+
+        const Fireworks = () => {
+            const [bursts, setBursts] = useState([]);
+
+            useEffect(() => {
+                const newBursts = [];
+                const burstCount = 3;
+                const particlesPerBurst = 20;
+
+                for (let b = 0; b < burstCount; b++) {
+                    const burstX = window.innerWidth / 2 + (Math.random() - 0.5) * 150;
+                    const burstY = window.innerHeight / 2 + (Math.random() - 0.5) * 150;
+                    const particles = [];
+
+                    for (let i = 0; i < particlesPerBurst; i++) {
+                        const angle = Math.random() * 2 * Math.PI;
+                        const speed = Math.random() * 4 + 2;
+                        const size = Math.random() * 6 + 3;
+                        const hue = Math.random() * 360;
+
+                        particles.push({
+                            id: `${b}-${i}`,
+                            x: burstX,
+                            y: burstY,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            size,
+                            color: `hsl(${hue}, 100%, 50%)`,
+                            opacity: 1,
+                        });
+                    }
+                    newBursts.push({ id: b, particles });
+                }
+
+                setBursts(newBursts);
+
+                const updateParticles = setInterval(() => {
+                    setBursts(prevBursts =>
+                        prevBursts.map(burst => ({
+                            ...burst,
+                            particles: burst.particles.map(p => ({
+                                ...p,
+                                x: p.x + p.vx,
+                                y: p.y + p.vy,
+                                opacity: p.opacity - 0.03,
+                                vy: p.vy + 0.04,
+                            })).filter(p => p.opacity > 0)
+                        })).filter(burst => burst.particles.length > 0)
+                    );
+                }, 1000 / 60);
+
+                const timeout = setTimeout(() => {
+                    clearInterval(updateParticles);
+                    setBursts([]);
+                }, 1500);
+
+                return () => {
+                    clearInterval(updateParticles);
+                    clearTimeout(timeout);
+                };
+            }, []);
+
+            return (
+                <>
+                    {bursts.map(burst =>
+                        burst.particles.map(particle => (
+                            <div
+                                key={particle.id}
+                                className="firework-particle"
+                                style={{
+                                    left: particle.x,
+                                    top: particle.y,
+                                    width: particle.size,
+                                    height: particle.size,
+                                    backgroundColor: particle.color,
+                                    opacity: particle.opacity,
+                                }}
+                            />
+                        ))
+                    )}
+                </>
+            );
+        };
+
+        const InstructionsModal = ({ isOpen, onClose }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Инструкция</h2>
+                        <div className="text-gray-300 mb-3 text-sm sm:text-base">
+                            <p className="mb-1"><strong>Как участвовать:</strong></p>
+                            <ul className="list-disc pl-5">
+                                <li>Нажмите «Участвовать» в разделе «Участники».</li>
+                                <li>Введите имя и следуйте инструкциям для оплаты.</li>
+                                <li>Переведите 100 ₽ через СБП на +79536029130 (Озон Банк).</li>
+                                <li>Нажмите «Оплатил».</li>
+                                <li>Дождитесь подтверждения от @FortuneWheelBot.</li>
+                            </ul>
+                            <p className="mt-3 mb-1"><strong>Как работает колесо:</strong></p>
+                            <ul className="list-disc pl-5">
+                                <li>Вращается ежедневно в 20:00.</li>
+                                <li>Таймер показывает время до вращения (ЧЧ:ММ:СС).</li>
+                                <li>После вращения объявляется победитель.</li>
+                            </ul>
+                            <p className="mt-3 mb-1"><strong>Призовой фонд:</strong></p>
+                            <ul className="list-disc pl-5">
+                                <li>Растёт на 100 ₽ за участника.</li>
+                                <li>Сбрасывается после вращения.</li>
+                            </ul>
+                            <p className="mt-3 mb-1"><strong>Примечания:</strong></p>
+                            <ul className="list-disc pl-5">
+                                <li>Оплата через перевод по номеру.</li>
+                                <li>Админ подтверждает через Telegram-бот.</li>
+                                <li>Поддержка: @FortuneWheelBot.</li>
+                            </ul>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const WinnersModal = ({ isOpen, onClose, winnersHistory }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">История победителей</h2>
+                        <div className="text-gray-300 mb-3 text-sm sm:text-base">
+                            <p className="mb-1">Последние 5 победителей:</p>
+                            <ul className="list-disc pl-5">
+                                {winnersHistory.length > 0 ? (
+                                    winnersHistory.map((winner, index) => (
+                                        <li key={index} className="mb-1">
+                                            {winner.name} - {winner.prize} ₽
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li>Нет данных о победителях</li>
+                                )}
+                            </ul>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const PaymentModal = ({ isOpen, onClose, name, setName, onConfirm }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Оплата участия</h2>
+                        <div className="mb-3">
+                            <label className="block text-gray-300 mb-1 text-sm sm:text-base">Ваше имя</label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Введите имя"
+                                className="p-2 w-full bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">
+                            Стоимость участия 100 ₽. Переведите СБП на <strong>+79536029130</strong> (Озон Банк) и нажмите "Оплатил".
+                        </p>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={() => onConfirm(name)}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex-1 text-sm"
+                                disabled={!name.trim()}
+                            >
+                                Оплатил
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex-1 text-sm"
+                            >
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminNotificationModal = ({ isOpen, pendingParticipant, onApprove, onReject }) => {
+            if (!isOpen || !pendingParticipant) return null;
+
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Новый участник</h2>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Участник: {pendingParticipant}</p>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Ожидает подтверждения оплаты (100 ₽).</p>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={() => onApprove(pendingParticipant)}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex-1 text-sm"
+                            >
+                                Подтвердить
+                            </button>
+                            <button
+                                onClick={() => onReject(pendingParticipant)}
+                                className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 flex-1 text-sm"
+                            >
+                                Отклонить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [participants, setParticipants] = useState([]);
+            const [name, setName] = useState('');
+            const [spinning, setSpinning] = useState(false);
+            const [winner, setWinner] = useState(null);
+            const [countdown, setCountdown] = useState(null);
+            const [prizePool, setPrizePool] = useState(0);
+            const [winnersHistory, setWinnersHistory] = useState([
+                { name: 'Иван', prize: 500 },
+                { name: 'Мария', prize: 300 },
+                { name: 'Алексей', prize: 700 },
+                { name: 'Елена', prize: 400 },
+                { name: 'Дмитрий', prize: 600 },
+            ]);
+            const [showFireworks, setShowFireworks] = useState(false);
+            const [showSidebar, setShowSidebar] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(false);
+            const [showWinners, setShowWinners] = useState(false);
+            const [showPaymentModal, setShowPaymentModal] = useState(false);
+            const [pendingParticipants, setPendingParticipants] = useState([]);
+            const [showAdminNotification, setShowAdminNotification] = useState(false);
+            const [canvasSize, setCanvasSize] = useState(400);
+            const [timerEnabled, setTimerEnabled] = useState(true);
+            const [rotation, setRotation] = useState(0);
+            const [spinTriggered, setSpinTriggered] = useState(false);
+            const [noParticipantsMessage, setNoParticipantsMessage] = useState('');
+            const [winnerVisible, setWinnerVisible] = useState(true);
+            const wheelRef = useRef(null);
+            const rotationRef = useRef(0);
+            const winnerTimeoutRef = useRef(null);
+
+            useEffect(() => {
+                const updateCanvasSize = () => {
+                    const width = window.innerWidth;
+                    if (width < 640) {
+                        setCanvasSize(260);
+                    } else if (width < 768) {
+                        setCanvasSize(320);
+                    } else {
+                        setCanvasSize(400);
+                    }
+                };
+
+                updateCanvasSize();
+                window.addEventListener('resize', updateCanvasSize);
+                return () => window.removeEventListener('resize', updateCanvasSize);
+            }, []);
+
+            const handleParticipate = () => {
+                setShowPaymentModal(true);
+            };
+
+            const handlePaymentConfirm = (participantName) => {
+                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
+                    alert(`Оплата отправлена на проверку. Дождитесь подтверждения от администратора через Telegram-бот @FortuneWheelBot.`);
+                    setPendingParticipants([...pendingParticipants, participantName.trim()]);
+                    setShowAdminNotification(true);
+                    setName('');
+                    setShowPaymentModal(false);
+                }
+            };
+
+            const approveParticipant = (participant) => {
+                setParticipants([...participants, participant]);
+                setPrizePool(prev => prev + 100);
+                setPendingParticipants(pendingParticipants.filter(p => p !== participant));
+                setShowAdminNotification(pendingParticipants.length > 1);
+            };
+
+            const rejectParticipant = (participant) => {
+                setPendingParticipants(pendingParticipants.filter(p => p !== participant));
+                setShowAdminNotification(pendingParticipants.length > 1);
+            };
+
+            const removeParticipant = (participant) => {
+                setParticipants(participants.filter(p => p !== participant));
+                setPrizePool(prev => prev - 100);
+            };
+
+            const startSpin = () => {
+                if (participants.length === 0) {
+                    setNoParticipantsMessage('Нет участников для розыгрыша');
+                    setTimeout(() => setNoParticipantsMessage(''), 5000);
+                    return;
+                }
+                setSpinning(true);
+                setWinner(null);
+                setWinnerVisible(true);
+                setNoParticipantsMessage('');
+                const spinDuration = 5000;
+                const startTime = Date.now();
+                const initialRotation = rotationRef.current;
+                const totalRotation = 360 * 5 + Math.random() * 360;
+
+                const spin = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / spinDuration;
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    rotationRef.current = initialRotation + easeOut * totalRotation;
+                    setRotation(rotationRef.current % 360);
+
+                    if (elapsed < spinDuration) {
+                        requestAnimationFrame(spin);
+                    } else {
+                        setSpinning(false);
+                        const finalRotation = rotationRef.current % 360;
+                        const winnerIndex = Math.floor(((360 - finalRotation) / 360) * participants.length) % participants.length;
+                        const newWinner = participants[winnerIndex];
+                        setWinner(newWinner);
+                        setWinnersHistory(prev => [
+                            { name: newWinner, prize: prizePool },
+                            ...prev.slice(0, 4),
+                        ]);
+                        setShowFireworks(true);
+                        setTimeout(() => setShowFireworks(false), 1500);
+                        setParticipants([]);
+                        setPrizePool(0);
+                        setSpinTriggered(false);
+
+                        // Clear winner after 5 seconds
+                        winnerTimeoutRef.current = setTimeout(() => {
+                            setWinner(null);
+                            setWinnerVisible(true);
+                        }, 5000);
+                    }
+                };
+                requestAnimationFrame(spin);
+            };
+
+            useEffect(() => {
+                return () => {
+                    if (winnerTimeoutRef.current) {
+                        clearTimeout(winnerTimeoutRef.current);
+                    }
+                };
+            }, []);
+
+            useEffect(() => {
+                if (!timerEnabled) return;
+
+                const getNextSpinTime = () => {
+                    const now = new Date();
+                    const targetTime = new Date();
+                    targetTime.setHours(20, 0, 0, 0);
+                    if (now >= targetTime) {
+                        targetTime.setDate(targetTime.getDate() + 1);
+                    }
+                    return targetTime;
+                };
+
+                const interval = setInterval(() => {
+                    const now = new Date();
+                    const targetTime = getNextSpinTime();
+                    const diff = targetTime - now;
+
+                    if (diff <= 1000 && !spinTriggered) {
+                        setSpinTriggered(true);
+                        startSpin();
+                    } else if (diff > 1000) {
+                        setSpinTriggered(false);
+                        const hours = Math.floor(diff / 3600000);
+                        const minutes = Math.floor((diff % 3600000) / 60000);
+                        const seconds = Math.floor((diff % 60000) / 1000);
+                        setCountdown(
+                            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                        );
+                    }
+                }, 1000);
+
+                return () => clearInterval(interval);
+            }, [timerEnabled, spinTriggered]);
+
+            return (
+                <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
+                    <button
+                        onClick={() => setShowSidebar(true)}
+                        className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div
+                        className={`fixed top-0 left-0 h-full w-full bg-gray-800 p-4 sidebar ${showSidebar ? '' : 'sidebar-hidden'} z-50`}
+                    >
+                        <button
+                            onClick={() => setShowSidebar(false)}
+                            className="absolute top-2 right-2 text-white hover:text-gray-300"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Меню</h2>
+                        <button
+                            onClick={() => { setShowInstructions(true); setShowSidebar(false); }}
+                            className="w-full px-3 py-1 mb-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm"
+                        >
+                            Инструкция
+                        </button>
+                        <button
+                            onClick={() => { setShowWinners(true); setShowSidebar(false); }}
+                            className="w-full px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm"
+                        >
+                            История победителей
+                        </button>
+                    </div>
+                    <InstructionsModal isOpen={showInstructions} onClose={() => setShowInstructions(false)} />
+                    <WinnersModal isOpen={showWinners} onClose={() => setShowWinners(false)} winnersHistory={winnersHistory} />
+                    <PaymentModal
+                        isOpen={showPaymentModal}
+                        onClose={() => setShowPaymentModal(false)}
+                        name={name}
+                        setName={setName}
+                        onConfirm={handlePaymentConfirm}
+                    />
+                    <AdminNotificationModal
+                        isOpen={showAdminNotification}
+                        pendingParticipant={pendingParticipants[0]}
+                        onApprove={approveParticipant}
+                        onReject={rejectParticipant}
+                    />
+                    <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
+                        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center">Колесо Фортуны</h1>
+                        {winner && (
+                            <p
+                                className={`mb-4 text-lg sm:text-xl font-bold text-yellow-400 winner-message ${winnerVisible ? '' : 'winner-message-hidden'} text-center`}
+                            >
+                                Победитель: {winner}
+                            </p>
+                        )}
+                        {noParticipantsMessage && (
+                            <p className="mb-4 text-lg sm:text-xl text-red-500 text-center">{noParticipantsMessage}</p>
+                        )}
+                        <p className="mb-3 text-lg sm:text-xl text-white text-center">Призовой фонд: {prizePool} ₽</p>
+                        <button
+                            onClick={startSpin}
+                            className="px-3 py-1 mb-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-600 text-sm"
+                            disabled={spinning || participants.length === 0}
+                            title="Для тестирования"
+                        >
+                            Запустить сейчас
+                        </button>
+                        {countdown && timerEnabled && (
+                            <div className="text-center mb-3">
+                                <h2 className="text-lg sm:text-xl font-bold gradient-text mb-1">Следующий розыгрыш</h2>
+                                <p className="text-base sm:text-lg text-gray-300 digital-timer">Запуск через: {countdown}</p>
+                            </div>
+                        )}
+                        {showFireworks && <Fireworks />}
+                        <Wheel
+                            participants={participants}
+                            winner={winner}
+                            spinning={spinning}
+                            rotation={rotation}
+                            canvasSize={canvasSize}
+                        />
+                    </div>
+                    <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
+                        <h2 className="text-lg sm:text-xl font-semibold mb-2 text-white">Участники</h2>
+                        <div className="flex flex-col mb-2">
+                            <button
+                                onClick={handleParticipate}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 text-sm"
+                                disabled={spinning}
+                            >
+                                Участвовать
+                            </button>
+                        </div>
+                        <ul className="list-disc pl-5 text-gray-300 text-sm">
+                            {participants.length > 0 ? (
+                                participants.map((p, i) => (
+                                    <li key={i} className="flex justify-between items-center">
+                                        {p}
+                                        <button
+                                            onClick={() => removeParticipant(p)}
+                                            className="ml-2 text-red-500 hover:text-red-700 text-sm"
+                                            disabled={spinning}
+                                        >
+                                            ✕
+                                        </button>
+                                    </li>
+                                ))
+                            ) : (
+                                <li>Нет участников</li>
+                            )}
+                        </ul>
+                        {pendingParticipants.length > 0 && (
+                            <div className="mt-2">
+                                <h3 className="text-base sm:text-lg font-semibold mb-1 text-white">Ожидают подтверждения:</h3>
+                                <ul className="list-disc pl-5 text-gray-300 text-sm">
+                                    {pendingParticipants.map((p, i) => (
+                                        <li key={i}>{p}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
