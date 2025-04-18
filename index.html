@@ -217,7 +217,7 @@
                                 <li>Введите имя и следуйте инструкциям для оплаты.</li>
                                 <li>Переведите 100 ₽ через СБП на +79536029130 (Озон Банк).</li>
                                 <li>Нажмите «Оплатил».</li>
-                                <li>Дождитесь подтверждения от @FortuneWheelBot.</li>
+                                <li>Дождитесь подтверждения Администратора.</li>
                             </ul>
                             <p className="mt-3 mb-1"><strong>Как работает колесо:</strong></p>
                             <ul className="list-disc pl-5">
@@ -233,7 +233,7 @@
                             <p className="mt-3 mb-1"><strong>Примечания:</strong></p>
                             <ul className="list-disc pl-5">
                                 <li>Оплата через перевод по номеру.</li>
-                                <li>Админ подтверждает через Telegram-бот.</li>
+                                <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
                                 <li>Поддержка: @FortuneWheelBot.</li>
                             </ul>
                         </div>
@@ -402,7 +402,7 @@
 
             const handlePaymentConfirm = (participantName) => {
                 if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
-                    alert(`Оплата отправлена на проверку. Дождитесь подтверждения от администратора через Telegram-бот @FortuneWheelBot.`);
+                    alert(`Оплата отправлена на проверку. После успешного подтверждения администратором вы будете добавлены в список участников.`);
                     setPendingParticipants([...pendingParticipants, participantName.trim()]);
                     setShowAdminNotification(true);
                     setName('');
