@@ -1,0 +1,49 @@
+const express = require('express');
+const db = require('../db');
+const { bot, ADMIN_ID } = require('../bot');
+const router = express.Router();
+
+// GET /pending
+router.get('/', (req, res) => {
+  db.all('SELECT name FROM pending', (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows.map(r => r.name));
+  });
+});
+
+// POST /pending
+router.post('/', (req, res) => {
+  const { name, telegramId } = req.body;
+  if (!name || !telegramId) return res.status(400).json({ error: 'Name and telegramId required' });
+
+  db.get('SELECT * FROM pending WHERE name = ?', [name], (err, row) => {
+    if (row) return res.status(409).json({ error: 'Already pending' });
+
+    db.get('SELECT * FROM participants WHERE name = ?', [name], (err, row2) => {
+      if (row2) return res.status(409).json({ error: 'Already registered' });
+
+      db.run('INSERT INTO pending (name, telegramId) VALUES (?, ?)', [name, telegramId], (err) => {
+        if (err) return res.status(500).json({ error: 'DB error' });
+
+        // Уведомление админа через Telegram на русском
+        bot.telegram.sendMessage(
+          ADMIN_ID,
+          `Новая заявка на участие:\nИмя: ${name}\nTelegram ID: ${telegramId}`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '✅ Подтвердить', callback_data: `approve_${name}` },
+                  { text: '❌ Отклонить', callback_data: `reject_${name}` }
+                ]
+              ]
+            }
+          }
+        );
+        res.json({ success: true });
+      });
+    });
+  });
+});
+
+module.exports = router;

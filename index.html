@@ -65,36 +65,34 @@
             opacity: 0;
         }
         .participate-btn {
-    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
-    box-shadow: 0 4px 24px 0 rgba(59, 130, 246, 0.25), 0 1.5px 6px 0 rgba(30, 64, 175, 0.12);
-    position: relative;
-    overflow: hidden;
-    transition: background 0.3s, box-shadow 0.3s, transform 0.15s;
-    animation: pulse-btn 2.8s infinite ease-in-out;
-    padding-left: 2.2em;
-    padding-right: 2.2em;
-}
-.participate-btn:hover:not(:disabled) {
-    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 8px 32px 0 rgba(59,130,246,0.35), 0 3px 12px 0 rgba(30,64,175,0.18);
-    transform: none;
-    animation: none;
-}
-@keyframes pulse-btn {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
-    }
-    50% {
-        transform: scale(1.035);
-        box-shadow: 0 0 18px 6px #3b82f677, 0 2px 6px 0 rgba(30,64,175,0.13);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
-    }
-}
-
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+            box-shadow: 0 1px 4px rgba(59, 130, 246, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: background 0.3s, box-shadow 0.3s, transform 0.15s;
+            animation: pulse-btn 4s infinite ease-in-out;
+            padding: 0.5em 1em;
+        }
+        .participate-btn:hover:not(:disabled) {
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 8px 32px 0 rgba(59,130,246,0.35), 0 3px 12px 0 rgba(30,64,175,0.18);
+            transform: none;
+            animation: none;
+        }
+        @keyframes pulse-btn {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
+            }
+            50% {
+                transform: scale(1.01);
+                box-shadow: 0 0 6px rgba(59, 130, 246, 0.2);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
+            }
+        }
     </style>
 </head>
 <body>
@@ -271,16 +269,16 @@
                             </ul>
                             <p className="mt-3 mb-1"><strong>Призовой фонд:</strong></p>
                             <ul className="list-disc pl-5">
-    <li>Растёт на 100 ₽ за участника.</li>
-    <li>Сбрасывается после вращения.</li>
-</ul>
-<p className="mt-3 mb-1"><strong>Оплата участия:</strong></p>
-<ul className="list-disc pl-5">
-    <li>Стоимость участия: <b>100 ₽</b>.</li>
-    <li>Перевод через <b>СБП</b> на номер: <b>+7&nbsp;953&nbsp;602-91-30</b> (Озон Банк).</li>
-    <li>После оплаты нажмите кнопку <b>«Оплатил»</b>.</li>
-    <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
-</ul>
+                                <li>Растёт на 100 ₽ за участника.</li>
+                                <li>Сбрасывается после вращения.</li>
+                            </ul>
+                            <p className="mt-3 mb-1"><strong>Оплата участия:</strong></p>
+                            <ul className="list-disc pl-5">
+                                <li>Стоимость участия: <b>100 ₽</b>.</li>
+                                <li>Перевод через <b>СБП</b> на номер: <b>+79536029130</b> (Озон Банк).</li>
+                                <li>После оплаты нажмите кнопку <b>«Оплатил»</b>.</li>
+                                <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
+                            </ul>
                         </div>
                         <button
                             onClick={onClose}
@@ -343,8 +341,8 @@
                             />
                         </div>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">
-    Стоимость участия 100 ₽. Перевод СБП <strong>+79536029130</strong> (Озон Банк) и нажмите "Оплатил".
-</p>
+                            Стоимость участия 100 ₽. Перевод СБП <strong>+79536029130</strong> (Озон Банк) и нажмите "Оплатил".
+                        </p>
                         <div className="flex space-x-2">
                             <button
                                 onClick={() => onConfirm(name)}
@@ -407,6 +405,7 @@
             const wheelRef = useRef(null);
             const rotationRef = useRef(0);
             const winnerTimeoutRef = useRef(null);
+            const prevPendingRef = useRef([]);
 
             const fetchData = async () => {
                 try {
@@ -640,6 +639,13 @@
                 };
             }, []);
 
+            useEffect(() => {
+                if (prevPendingRef.current.length > 0 && pendingParticipants.length === 0) {
+                    fetchData();
+                }
+                prevPendingRef.current = pendingParticipants;
+            }, [pendingParticipants]);
+
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
                     <button
@@ -696,9 +702,9 @@
                     />
                     <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
                         <div style={{position:'relative', display:'inline-block', width:'100%'}}>
-  <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
-  <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center" style={{position:'relative', zIndex:4}}>Колесо Фортуны</h1>
-</div>
+                            <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
+                            <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center" style={{position:'relative', zIndex:4}}>Колесо Фортуны</h1>
+                        </div>
                         {winner && (
                             <p
                                 className={`mb-4 text-lg sm:text-xl font-bold text-yellow-400 winner-message ${winnerVisible ? '' : 'winner-message-hidden'} text-center`}
@@ -715,8 +721,8 @@
                             <div className="text-center mb-3">
                                 <h2 className="text-lg sm:text-xl font-bold gradient-text mb-1">Следующий розыгрыш</h2>
                                 <p className="text-base sm:text-lg text-gray-300 digital-timer">
-  Запуск через: <span style={{fontSize:'1.35em', color:'#fff', fontWeight:'bold', textShadow:'0 2px 8px #000, 0 0 2px #fff'}}>{countdown}</span>
-</p>
+                                    Запуск через: <span style={{fontSize:'1.35em', color:'#fff', fontWeight:'bold', textShadow:'0 2px 8px #000, 0 0 2px #fff'}}>{countdown}</span>
+                                </p>
                             </div>
                         )}
                         {showFireworks && <Fireworks />}
