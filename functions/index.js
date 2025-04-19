@@ -55,9 +55,12 @@ bot.command('start', (ctx) => {
   if (ctx.from.id.toString() === ADMIN_ID) {
     ctx.reply('Добро пожаловать, админ!\nДоступные команды:\n/start - Начать работу с ботом\n/help - Показать список команд\n/participants - Список участников\n/winners - История победителей\n/prizepool - Текущий призовой фонд\n/approve <имя> - Подтвердить участника\n/reject <имя> - Отклонить участника');
   } else {
-    ctx.reply('Добро пожаловать в бота Колесо Фортуны! Здесь вы сможете участвовать в ежедневных розыгрышах. Следи за новостями — подпишись на наш официальный канал!', {
+    ctx.reply('Добро пожаловать! Это бот, в котором ты можешь выиграть крупную сумму денег. Открой приложение и участвуй — твой Telegram ID будет зарегистрирован автоматически!', {
       reply_markup: {
         inline_keyboard: [
+          [
+            { text: 'Открыть приложение', web_app: { url: 'https://aidevil-production.up.railway.app' } }
+          ],
           [
             { text: '🔵 Официальный канал', url: 'https://t.me/channel_fortune' }
           ]
@@ -247,16 +250,6 @@ bot.action(/reject_(.+)/, (ctx) => {
   });
 });
 
-// Запуск Telegram-бота
-bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));
-bot.launch()
-  .then(() => logger.info('Telegram bot started'))
-  .catch(err => logger.error('Bot launch error:', err));
-
-// Грейсфул-стоп бота при завершении процесса
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
 // Express API
 const app = express();
 app.use(express.json());
@@ -276,6 +269,30 @@ app.use('/pending', pendingRoute);
 app.use('/winners', winnersRoute);
 app.use('/prizepool', prizepoolRoute);
 app.use('/spin', spinRoute);
+
+// Запуск бота: polling локально, webhook в продакшн
+bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));
+const HOST_URL = process.env.HOST_URL;
+const WEBHOOK_PATH = process.env.WEBHOOK_PATH || '/bot';
+if (HOST_URL) {
+  // Production Webhook
+  (async () => {
+    try {
+      await bot.telegram.setWebhook(`${HOST_URL}${WEBHOOK_PATH}`);
+      logger.info(`Webhook установлен: ${HOST_URL}${WEBHOOK_PATH}`);
+    } catch (err) {
+      logger.error('Ошибка установки webhook:', err);
+    }
+  })();
+  app.use(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
+} else {
+  // Local polling
+  bot.launch()
+    .then(() => logger.info('Telegram bot started (polling)'))
+    .catch(err => logger.error('Bot launch error:', err));
+  process.once('SIGINT', () => bot.stop('SIGINT'));
+  process.once('SIGTERM', () => bot.stop('SIGTERM'));
+}
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;
