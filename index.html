@@ -98,6 +98,10 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
+// Получаем telegramId из Telegram WebApp (если есть)
+const tg = window.Telegram?.WebApp;
+const telegramId = tg?.initDataUnsafe?.user?.id || null;
+
         const { useState, useEffect, useRef } = React;
 
         const Wheel = ({ participants, winner, spinning, rotation, canvasSize }) => {
@@ -379,9 +383,15 @@
         };
 
         const App = () => {
+    useEffect(() => {
+        if (!telegramId) {
+            alert('Пожалуйста, откройте приложение через Telegram-бота для участия!');
+        }
+    }, []);
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
             const [name, setName] = useState('');
+// telegramId уже получен глобально
             const [spinning, setSpinning] = useState(false);
             const [winner, setWinner] = useState(null);
             const [countdown, setCountdown] = useState(null);
@@ -511,20 +521,6 @@
                 setShowPaymentModal(true);
             };
 
-            const handlePaymentConfirm = async (participantName) => {
-                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
-                    try {
-                        const telegramId = 'web_user_' + Math.random().toString(36).substring(2);
-                        console.log('Отправляем:', { name: participantName.trim(), telegramId });
-                        const response = await fetch('http://localhost:3000/pending', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: participantName.trim(), telegramId })
-                        });
-                        const result = await response.json();
-                        console.log('Ответ от сервера:', result);
-                        if (result.success) {
-                            setPendingParticipants([...pendingParticipants, participantName.trim()]);
                             setShowAdminNotification(true);
                             setName('');
                             setShowPaymentModal(false); // Просто закрываем окно оплаты, никаких alert
