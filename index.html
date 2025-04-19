@@ -64,6 +64,37 @@
         .winner-message-hidden {
             opacity: 0;
         }
+        .participate-btn {
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+    box-shadow: 0 4px 24px 0 rgba(59, 130, 246, 0.25), 0 1.5px 6px 0 rgba(30, 64, 175, 0.12);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.15s;
+    animation: pulse-btn 2.8s infinite ease-in-out;
+    padding-left: 2.2em;
+    padding-right: 2.2em;
+}
+.participate-btn:hover:not(:disabled) {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 8px 32px 0 rgba(59,130,246,0.35), 0 3px 12px 0 rgba(30,64,175,0.18);
+    transform: none;
+    animation: none;
+}
+@keyframes pulse-btn {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
+    }
+    50% {
+        transform: scale(1.035);
+        box-shadow: 0 0 18px 6px #3b82f677, 0 2px 6px 0 rgba(30,64,175,0.13);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
+    }
+}
+
     </style>
 </head>
 <body>
@@ -82,7 +113,7 @@
                 const centerY = canvas.height / 2;
                 const radius = canvas.width / 2 - 10;
                 const arc = 2 * Math.PI / (participants.length || 1);
-                const fontSize = canvasSize < 300 ? 8 : 12;
+                const fontSize = canvasSize < 300 ? 18 : canvasSize < 400 ? 22 : 28;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -100,15 +131,24 @@
                     ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.rotate(i * arc + arc / 2);
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
                     ctx.fillStyle = '#fff';
-                    ctx.font = `${fontSize}px Arial`;
+                    ctx.shadowColor = '#222';
+                    ctx.shadowBlur = 4;
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 8;
                     ctx.fillText(participant || 'Пусто', radius / 2, 0);
+                    ctx.shadowBlur = 0;
+                    ctx.strokeText(participant || 'Пусто', radius / 2, 0);
                     ctx.restore();
                 });
 
                 ctx.restore();
 
-                // Draw pointer
                 ctx.beginPath();
                 ctx.moveTo(canvas.width - 12, centerY - 6);
                 ctx.lineTo(canvas.width, centerY);
@@ -117,7 +157,11 @@
                 ctx.fill();
             }, [participants, spinning, rotation, canvasSize]);
 
-            return <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto"></canvas>;
+            return <div style={{display:'flex',justifyContent:'center'}}>
+                <div style={{boxShadow:'0 0 60px 10px #3cf,0 0 100px 30px #39f',borderRadius:'50%',background:'rgba(0,0,30,0.15)',padding:'18px'}}>
+                    <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto"></canvas>
+                </div>
+            </div>;
         };
 
         const Fireworks = () => {
@@ -227,15 +271,16 @@
                             </ul>
                             <p className="mt-3 mb-1"><strong>Призовой фонд:</strong></p>
                             <ul className="list-disc pl-5">
-                                <li>Растёт на 100 ₽ за участника.</li>
-                                <li>Сбрасывается после вращения.</li>
-                            </ul>
-                            <p className="mt-3 mb-1"><strong>Примечания:</strong></p>
-                            <ul className="list-disc pl-5">
-                                <li>Оплата через перевод по номеру.</li>
-                                <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
-                                <li>Поддержка: @FortuneWheelBot.</li>
-                            </ul>
+    <li>Растёт на 100 ₽ за участника.</li>
+    <li>Сбрасывается после вращения.</li>
+</ul>
+<p className="mt-3 mb-1"><strong>Оплата участия:</strong></p>
+<ul className="list-disc pl-5">
+    <li>Стоимость участия: <b>100 ₽</b>.</li>
+    <li>Перевод через <b>СБП</b> на номер: <b>+7&nbsp;953&nbsp;602-91-30</b> (Озон Банк).</li>
+    <li>После оплаты нажмите кнопку <b>«Оплатил»</b>.</li>
+    <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
+</ul>
                         </div>
                         <button
                             onClick={onClose}
@@ -261,7 +306,7 @@
                                 {winnersHistory.length > 0 ? (
                                     winnersHistory.map((winner, index) => (
                                         <li key={index} className="mb-1">
-                                            {winner.name} - {winner.prize} ₽
+                                            {winner.name} - {winner.prize} ₽ ({winner.date})
                                         </li>
                                     ))
                                 ) : (
@@ -298,8 +343,8 @@
                             />
                         </div>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">
-                            Стоимость участия 100 ₽. Переведите СБП на <strong>+79536029130</strong> (Озон Банк) и нажмите "Оплатил".
-                        </p>
+    Стоимость участия 100 ₽. Перевод СБП <strong>+79536029130</strong> (Озон Банк) и нажмите "Оплатил".
+</p>
                         <div className="flex space-x-2">
                             <button
                                 onClick={() => onConfirm(name)}
@@ -320,7 +365,7 @@
             );
         };
 
-        const AdminNotificationModal = ({ isOpen, pendingParticipant, onApprove, onReject }) => {
+        const AdminNotificationModal = ({ isOpen, pendingParticipant }) => {
             if (!isOpen || !pendingParticipant) return null;
 
             return (
@@ -329,20 +374,7 @@
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Новый участник</h2>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">Участник: {pendingParticipant}</p>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">Ожидает подтверждения оплаты (100 ₽).</p>
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={() => onApprove(pendingParticipant)}
-                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex-1 text-sm"
-                            >
-                                Подтвердить
-                            </button>
-                            <button
-                                onClick={() => onReject(pendingParticipant)}
-                                className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 flex-1 text-sm"
-                            >
-                                Отклонить
-                            </button>
-                        </div>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Админ получил уведомление и проверит оплату.</p>
                     </div>
                 </div>
             );
@@ -350,24 +382,19 @@
 
         const App = () => {
             const [participants, setParticipants] = useState([]);
+            const [pendingParticipants, setPendingParticipants] = useState([]);
             const [name, setName] = useState('');
             const [spinning, setSpinning] = useState(false);
             const [winner, setWinner] = useState(null);
             const [countdown, setCountdown] = useState(null);
             const [prizePool, setPrizePool] = useState(0);
-            const [winnersHistory, setWinnersHistory] = useState([
-                { name: 'Иван', prize: 500 },
-                { name: 'Мария', prize: 300 },
-                { name: 'Алексей', prize: 700 },
-                { name: 'Елена', prize: 400 },
-                { name: 'Дмитрий', prize: 600 },
-            ]);
+            const [winnersHistory, setWinnersHistory] = useState([]);
             const [showFireworks, setShowFireworks] = useState(false);
             const [showSidebar, setShowSidebar] = useState(false);
             const [showInstructions, setShowInstructions] = useState(false);
             const [showWinners, setShowWinners] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
-            const [pendingParticipants, setPendingParticipants] = useState([]);
+            const [pendingParticipant, setPendingParticipant] = useState(null);
             const [showAdminNotification, setShowAdminNotification] = useState(false);
             const [canvasSize, setCanvasSize] = useState(400);
             const [timerEnabled, setTimerEnabled] = useState(true);
@@ -375,9 +402,60 @@
             const [spinTriggered, setSpinTriggered] = useState(false);
             const [noParticipantsMessage, setNoParticipantsMessage] = useState('');
             const [winnerVisible, setWinnerVisible] = useState(true);
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [adminId, setAdminId] = useState('');
             const wheelRef = useRef(null);
             const rotationRef = useRef(0);
             const winnerTimeoutRef = useRef(null);
+
+            const fetchData = async () => {
+                try {
+                    const participantsRes = await fetch('http://localhost:3000/participants');
+                    const participantsData = await participantsRes.json();
+                    setParticipants(participantsData);
+
+                    const pendingRes = await fetch('http://localhost:3000/pending');
+                    const pendingData = await pendingRes.json();
+                    setPendingParticipants(pendingData);
+                    setPendingParticipant(pendingData[0] || null);
+                    setShowAdminNotification(!!pendingData[0]);
+
+                    const winnersRes = await fetch('http://localhost:3000/winners');
+                    const winnersData = await winnersRes.json();
+                    setWinnersHistory(winnersData);
+
+                    const prizePoolRes = await fetch('http://localhost:3000/prizepool');
+                    const prizePoolData = await prizePoolRes.json();
+                    setPrizePool(prizePoolData.amount);
+
+                    // Проверяем, что все данные загружены, прежде чем запускать салют
+                    if (
+                        participantsData && Array.isArray(participantsData) &&
+                        prizePoolData && typeof prizePoolData.amount === 'number' &&
+                        winnersData && Array.isArray(winnersData) &&
+                        winnersData.length > winnersHistory.length &&
+                        participantsData.length === 0 &&
+                        prizePoolData.amount === 0
+                    ) {
+                        const newWinner = winnersData[0];
+                        setWinner(newWinner.name);
+                        setShowFireworks(true);
+                        setTimeout(() => setShowFireworks(false), 1500);
+                        setTimeout(() => {
+                            setWinner(null);
+                            setWinnerVisible(true);
+                        }, 5000);
+                    }
+                } catch (error) {
+                    console.error('Ошибка получения данных:', error);
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+                const interval = setInterval(fetchData, 5000);
+                return () => clearInterval(interval);
+            }, []);
 
             useEffect(() => {
                 const updateCanvasSize = () => {
@@ -394,95 +472,6 @@
                 updateCanvasSize();
                 window.addEventListener('resize', updateCanvasSize);
                 return () => window.removeEventListener('resize', updateCanvasSize);
-            }, []);
-
-            const handleParticipate = () => {
-                setShowPaymentModal(true);
-            };
-
-            const handlePaymentConfirm = (participantName) => {
-                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
-                    alert(`Оплата отправлена на проверку. После успешного подтверждения администратором вы будете добавлены в список участников.`);
-                    setPendingParticipants([...pendingParticipants, participantName.trim()]);
-                    setShowAdminNotification(true);
-                    setName('');
-                    setShowPaymentModal(false);
-                }
-            };
-
-            const approveParticipant = (participant) => {
-                setParticipants([...participants, participant]);
-                setPrizePool(prev => prev + 100);
-                setPendingParticipants(pendingParticipants.filter(p => p !== participant));
-                setShowAdminNotification(pendingParticipants.length > 1);
-            };
-
-            const rejectParticipant = (participant) => {
-                setPendingParticipants(pendingParticipants.filter(p => p !== participant));
-                setShowAdminNotification(pendingParticipants.length > 1);
-            };
-
-            const removeParticipant = (participant) => {
-                setParticipants(participants.filter(p => p !== participant));
-                setPrizePool(prev => prev - 100);
-            };
-
-            const startSpin = () => {
-                if (participants.length === 0) {
-                    setNoParticipantsMessage('Нет участников для розыгрыша');
-                    setTimeout(() => setNoParticipantsMessage(''), 5000);
-                    return;
-                }
-                setSpinning(true);
-                setWinner(null);
-                setWinnerVisible(true);
-                setNoParticipantsMessage('');
-                const spinDuration = 5000;
-                const startTime = Date.now();
-                const initialRotation = rotationRef.current;
-                const totalRotation = 360 * 5 + Math.random() * 360;
-
-                const spin = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = elapsed / spinDuration;
-                    const easeOut = 1 - Math.pow(1 - progress, 3);
-                    rotationRef.current = initialRotation + easeOut * totalRotation;
-                    setRotation(rotationRef.current % 360);
-
-                    if (elapsed < spinDuration) {
-                        requestAnimationFrame(spin);
-                    } else {
-                        setSpinning(false);
-                        const finalRotation = rotationRef.current % 360;
-                        const winnerIndex = Math.floor(((360 - finalRotation) / 360) * participants.length) % participants.length;
-                        const newWinner = participants[winnerIndex];
-                        setWinner(newWinner);
-                        setWinnersHistory(prev => [
-                            { name: newWinner, prize: prizePool },
-                            ...prev.slice(0, 4),
-                        ]);
-                        setShowFireworks(true);
-                        setTimeout(() => setShowFireworks(false), 1500);
-                        setParticipants([]);
-                        setPrizePool(0);
-                        setSpinTriggered(false);
-
-                        // Clear winner after 5 seconds
-                        winnerTimeoutRef.current = setTimeout(() => {
-                            setWinner(null);
-                            setWinnerVisible(true);
-                        }, 5000);
-                    }
-                };
-                requestAnimationFrame(spin);
-            };
-
-            useEffect(() => {
-                return () => {
-                    if (winnerTimeoutRef.current) {
-                        clearTimeout(winnerTimeoutRef.current);
-                    }
-                };
             }, []);
 
             useEffect(() => {
@@ -505,7 +494,6 @@
 
                     if (diff <= 1000 && !spinTriggered) {
                         setSpinTriggered(true);
-                        startSpin();
                     } else if (diff > 1000) {
                         setSpinTriggered(false);
                         const hours = Math.floor(diff / 3600000);
@@ -519,6 +507,138 @@
 
                 return () => clearInterval(interval);
             }, [timerEnabled, spinTriggered]);
+
+            const handleParticipate = () => {
+                setShowPaymentModal(true);
+            };
+
+            const handlePaymentConfirm = async (participantName) => {
+                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
+                    try {
+                        const telegramId = 'web_user_' + Math.random().toString(36).substring(2);
+                        console.log('Отправляем:', { name: participantName.trim(), telegramId });
+                        const response = await fetch('http://localhost:3000/pending', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: participantName.trim(), telegramId })
+                        });
+                        const result = await response.json();
+                        console.log('Ответ от сервера:', result);
+                        if (result.success) {
+                            setPendingParticipants([...pendingParticipants, participantName.trim()]);
+                            setShowAdminNotification(true);
+                            setName('');
+                            setShowPaymentModal(false); // Просто закрываем окно оплаты, никаких alert
+                        } else {
+                            alert('Ошибка при добавлении заявки.');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка добавления участника:', error);
+                        alert('Ошибка при добавлении заявки.');
+                    }
+                }
+            };
+
+            const removeParticipant = async (participant) => {
+                try {
+                    const response = await fetch(`http://localhost:3000/participants/${participant}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        setParticipants(participants.filter(p => p !== participant));
+                        setPrizePool(prev => prev - 100);
+                    } else {
+                        alert('Ошибка при удалении участника.');
+                    }
+                } catch (error) {
+                    console.error('Ошибка удаления участника:', error);
+                    alert('Ошибка при удалении участника.');
+                }
+            };
+
+            const startSpin = async () => {
+                if (participants.length === 0) {
+                    setNoParticipantsMessage('Нет участников для розыгрыша');
+                    setTimeout(() => setNoParticipantsMessage(''), 5000);
+                    return;
+                }
+
+                if (!isAdmin) {
+                    alert('Введите ID администратора для запуска розыгрыша:');
+                    const id = prompt('Введите ваш Telegram ID:');
+                    if (id !== 'YOUR_ADMIN_ID') { // Замени YOUR_ADMIN_ID на свой Telegram ID
+                        alert('Неверный ID администратора.');
+                        return;
+                    }
+                    setIsAdmin(true);
+                    setAdminId(id);
+                }
+
+                try {
+                    setSpinning(true);
+                    setWinner(null);
+                    setWinnerVisible(true);
+                    setNoParticipantsMessage('');
+
+                    const response = await fetch('http://localhost:3000/spin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminId })
+                    });
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        setNoParticipantsMessage(result.message || 'Нет участников для розыгрыша');
+                        setSpinning(false);
+                        setTimeout(() => setNoParticipantsMessage(''), 5000);
+                        return;
+                    }
+
+                    const spinDuration = 5000;
+                    const startTime = Date.now();
+                    const initialRotation = rotationRef.current;
+                    const totalRotation = 360 * 5 + Math.random() * 360;
+
+                    const spin = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = elapsed / spinDuration;
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
+                        rotationRef.current = initialRotation + easeOut * totalRotation;
+                        setRotation(rotationRef.current % 360);
+
+                        if (elapsed < spinDuration) {
+                            requestAnimationFrame(spin);
+                        } else {
+                            setSpinning(false);
+                            const finalRotation = rotationRef.current % 360;
+                            const winnerIndex = Math.floor(((360 - finalRotation) / 360) * participants.length) % participants.length;
+                            const newWinner = participants[winnerIndex];
+                            setWinner(newWinner);
+                            setShowFireworks(true);
+                            setTimeout(() => setShowFireworks(false), 1500);
+                            setTimeout(() => {
+                                setWinner(null);
+                                setWinnerVisible(true);
+                            }, 5000);
+                        }
+                    };
+                    requestAnimationFrame(spin);
+                } catch (error) {
+                    console.error('Ошибка при запуске розыгрыша:', error);
+                    setSpinning(false);
+                    alert('Ошибка при запуске розыгрыша.');
+                }
+            };
+
+            useEffect(() => {
+                return () => {
+                    if (winnerTimeoutRef.current) {
+                        clearTimeout(winnerTimeoutRef.current);
+                    }
+                };
+            }, []);
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
@@ -538,10 +658,16 @@
                             className="absolute top-2 right-2 text-white hover:text-gray-300"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 6l12 12M6 18L18 6" />
                             </svg>
                         </button>
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Меню</h2>
+                        <button
+                            className="w-full px-3 py-1 bg-gray-700 text-white rounded-lg text-left text-sm opacity-70 cursor-not-allowed mb-1"
+                            disabled
+                        >
+                            Личный кабинет (в разработке)
+                        </button>
                         <button
                             onClick={() => { setShowInstructions(true); setShowSidebar(false); }}
                             className="w-full px-3 py-1 mb-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm"
@@ -566,12 +692,13 @@
                     />
                     <AdminNotificationModal
                         isOpen={showAdminNotification}
-                        pendingParticipant={pendingParticipants[0]}
-                        onApprove={approveParticipant}
-                        onReject={rejectParticipant}
+                        pendingParticipant={pendingParticipant}
                     />
                     <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
-                        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center">Колесо Фортуны</h1>
+                        <div style={{position:'relative', display:'inline-block', width:'100%'}}>
+  <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
+  <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center" style={{position:'relative', zIndex:4}}>Колесо Фортуны</h1>
+</div>
                         {winner && (
                             <p
                                 className={`mb-4 text-lg sm:text-xl font-bold text-yellow-400 winner-message ${winnerVisible ? '' : 'winner-message-hidden'} text-center`}
@@ -582,19 +709,14 @@
                         {noParticipantsMessage && (
                             <p className="mb-4 text-lg sm:text-xl text-red-500 text-center">{noParticipantsMessage}</p>
                         )}
-                        <p className="mb-3 text-lg sm:text-xl text-white text-center">Призовой фонд: {prizePool} ₽</p>
-                        <button
-                            onClick={startSpin}
-                            className="px-3 py-1 mb-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-600 text-sm"
-                            disabled={spinning || participants.length === 0}
-                            title="Для тестирования"
-                        >
-                            Запустить сейчас
-                        </button>
+                        <p className="mb-3 text-lg sm:text-xl text-white text-center">Призовой фонд: <span style={{color:'#22c55e', fontSize:'1.4em', fontWeight:'bold'}}>{prizePool} ₽</span></p>
+                        
                         {countdown && timerEnabled && (
                             <div className="text-center mb-3">
                                 <h2 className="text-lg sm:text-xl font-bold gradient-text mb-1">Следующий розыгрыш</h2>
-                                <p className="text-base sm:text-lg text-gray-300 digital-timer">Запуск через: {countdown}</p>
+                                <p className="text-base sm:text-lg text-gray-300 digital-timer">
+  Запуск через: <span style={{fontSize:'1.35em', color:'#fff', fontWeight:'bold', textShadow:'0 2px 8px #000, 0 0 2px #fff'}}>{countdown}</span>
+</p>
                             </div>
                         )}
                         {showFireworks && <Fireworks />}
@@ -607,28 +729,21 @@
                         />
                     </div>
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
-                        <h2 className="text-lg sm:text-xl font-semibold mb-2 text-white">Участники</h2>
                         <div className="flex flex-col mb-2">
                             <button
                                 onClick={handleParticipate}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 text-sm"
+                                className="participate-btn px-4 py-2 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
                                 disabled={spinning}
                             >
                                 Участвовать
                             </button>
                         </div>
-                        <ul className="list-disc pl-5 text-gray-300 text-sm">
+                        <h2 className="text-lg sm:text-xl font-semibold mb-2 text-white">Участники</h2>
+                        <ul className="list-decimal pl-5 text-gray-300 text-sm">
                             {participants.length > 0 ? (
                                 participants.map((p, i) => (
-                                    <li key={i} className="flex justify-between items-center">
-                                        {p}
-                                        <button
-                                            onClick={() => removeParticipant(p)}
-                                            className="ml-2 text-red-500 hover:text-red-700 text-sm"
-                                            disabled={spinning}
-                                        >
-                                            ✕
-                                        </button>
+                                    <li key={i} className="flex items-center">
+                                        <span>{i + 1}. {p}</span>
                                     </li>
                                 ))
                             ) : (
