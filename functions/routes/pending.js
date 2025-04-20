@@ -15,6 +15,8 @@ router.get('/', (req, res) => {
 router.get('/check', (req, res) => {
   const telegramId = req.query.telegramId;
   if (!telegramId) return res.status(400).json({ error: 'telegramId required' });
+  // Admin bypass
+  if (telegramId === ADMIN_ID) return res.json({ success: true });
   // Проверяем pending
   db.get('SELECT 1 FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });

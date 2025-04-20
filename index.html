@@ -576,6 +576,11 @@
 
             // Обработчик кнопки "Участвовать" (открывает окно оплаты)
             const handleParticipate = async () => {
+                // Если telegramId ещё не задан (пользователь не авторизован), открываем ввод имени
+                if (!telegramId) {
+                    setShowPaymentModal(true);
+                    return;
+                }
                 try {
                     const res = await fetch(`/pending/check?telegramId=${telegramId}`);
                     const result = await res.json();
