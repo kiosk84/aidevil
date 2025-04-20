@@ -275,34 +275,34 @@
                 <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
                     <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Инструкция</h2>
-                        <div className="text-gray-300 mb-3 text-sm sm:text-base">
-                            <p className="mb-1"><strong>Как участвовать:</strong></p>
-                            <ul className="list-disc pl-5">
-                                <li>Нажмите «Участвовать» в разделе «Участники».</li>
-                                <li>Введите имя и следуйте инструкциям для оплаты.</li>
-                                <li>Переведите 100 ₽ через СБП на +79536029130 (Озон Банк).</li>
-                                <li>Нажмите «Оплатил».</li>
-                                <li>Дождитесь подтверждения Администратора.</li>
-                            </ul>
-                            <p className="mt-3 mb-1"><strong>Как работает колесо:</strong></p>
-                            <ul className="list-disc pl-5">
-                                <li>Вращается ежедневно в 20:00.</li>
-                                <li>Таймер показывает время до вращения (ЧЧ:ММ:СС).</li>
-                                <li>После вращения объявляется победитель.</li>
-                            </ul>
-                            <p className="mt-3 mb-1"><strong>Призовой фонд:</strong></p>
-                            <ul className="list-disc pl-5">
-                                <li>Растёт на 100 ₽ за участника.</li>
-                                <li>Сбрасывается после вращения.</li>
-                                <li>15% от выигрыша направляется в фонд развития проекта и на поддержку платформы.</li>
-                            </ul>
-                            <p className="mt-3 mb-1"><strong>Оплата участия:</strong></p>
-                            <ul className="list-disc pl-5">
-                                <li>Стоимость участия: <b>100 ₽</b>.</li>
-                                <li>Перевод через <b>СБП</b> на номер: <b>+79536029130</b> (Озон Банк).</li>
-                                <li>После оплаты нажмите кнопку <b>«Оплатил»</b>.</li>
-                                <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
-                            </ul>
+                        <div className="text-gray-300 mb-3 text-sm sm:text-base space-y-4">
+                            <div>
+                                <h3 className="font-semibold mb-1">Как участвовать:</h3>
+                                <ol className="list-decimal list-inside space-y-1">
+                                    <li>Нажмите «Участвовать» в разделе «Участники».</li>
+                                    <li>Введите имя и следуйте инструкциям для оплаты.</li>
+                                    <li>Переведите 100 ₽ через СБП на +79536029130 (Озон Банк).</li>
+                                    <li>Нажмите «Оплатил».</li>
+                                    <li>Дождитесь подтверждения Администратора.</li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold mb-1">Как работает колесо:</h3>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Вращается ежедневно в 20:00.</li>
+                                    <li>Таймер показывает время до вращения (ЧЧ:ММ:СС).</li>
+                                    <li>После вращения объявляется победитель.</li>
+                                    <li>В случае выигрыша администратор свяжется с вами для уточнения деталей получения приза.</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold mb-1">Призовой фонд:</h3>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Растёт на 100 ₽ за участника.</li>
+                                    <li>Сбрасывается после вращения.</li>
+                                    <li>15% от выигрыша направляется в фонд развития проекта и на поддержку платформы.</li>
+                                </ul>
+                            </div>
                         </div>
                         <button
                             onClick={onClose}
