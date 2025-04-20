@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const db = require('./db');
 const { bot, ADMIN_ID } = require('./bot');
 const express = require('express');
@@ -305,12 +305,15 @@ app.use('/spin', spinRoute);
 bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));
 const HOST_URL = process.env.HOST_URL;
 const WEBHOOK_PATH = process.env.WEBHOOK_PATH || '/bot';
+logger.info(`HOST_URL=${HOST_URL}, WEBHOOK_PATH=${WEBHOOK_PATH}`);
 if (HOST_URL) {
   // Production Webhook
   (async () => {
     try {
       await bot.telegram.setWebhook(`${HOST_URL}${WEBHOOK_PATH}`);
       logger.info(`Webhook установлен: ${HOST_URL}${WEBHOOK_PATH}`);
+      const webhookInfo = await bot.telegram.getWebhookInfo();
+      logger.info(`Webhook info: ${JSON.stringify(webhookInfo)}`);
     } catch (err) {
       logger.error('Ошибка установки webhook:', err);
     }
