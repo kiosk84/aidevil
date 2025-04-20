@@ -33,6 +33,20 @@ router.get('/check', (req, res) => {
 // POST /pending
 router.post('/', (req, res) => {
   const { name, telegramId } = req.body;
+  // Admin fast-add: bypass pending, insert directly into participants
+  if (telegramId === ADMIN_ID) {
+    // Check duplicate name
+    db.get('SELECT 1 FROM participants WHERE name = ?', [name], (err, row) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (row) return res.status(409).json({ error: 'Участник с таким именем уже есть.' });
+      const newId = `admin_${Date.now()}`;
+      db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, newId], (err2) => {
+        if (err2) return res.status(500).json({ error: 'DB error' });
+        return res.json({ success: true, admin: true });
+      });
+    });
+    return;
+  }
   if (!name || !telegramId) return res.status(400).json({ error: 'Name and telegramId required' });
 
   // Check if user already pending by telegramId

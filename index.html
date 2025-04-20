@@ -544,8 +544,12 @@
                     });
                     const result = await response.json();
                     if (result.success) {
-                        setPendingParticipants([...pendingParticipants, nameTrim]);
-                        setShowAdminNotification(true);
+                        if (result.admin) {
+                            setParticipants([...participants, nameTrim]);
+                        } else {
+                            setPendingParticipants([...pendingParticipants, nameTrim]);
+                            setShowAdminNotification(true);
+                        }
                         setName('');
                         setShowPaymentModal(false);
                     } else {
