@@ -517,40 +517,27 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                 return () => clearInterval(interval);
             }, [timerEnabled, spinTriggered]);
 
-            const handleParticipate = () => {
-                setShowPaymentModal(true);
-            };
-
+            const handlePaymentConfirm = async (participantName) => {
+                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
+                    try {
+                        const response = await fetch('/pending', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: participantName.trim(), telegramId })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            setPendingParticipants([...pendingParticipants, participantName.trim()]);
                             setShowAdminNotification(true);
                             setName('');
-                            setShowPaymentModal(false); // Просто закрываем окно оплаты, никаких alert
-                        } 
-                    } else {
+                            setShowPaymentModal(false); 
+                        } else {
+                            alert('Ошибка при добавлении заявки.');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка добавления участника:', error);
                         alert('Ошибка при добавлении заявки.');
                     }
-                } catch (error) {
-                    console.error('Ошибка добавления участника:', error);
-                    alert('Ошибка при добавлении заявки.');
-                }
-                }
-            };
-
-            const removeParticipant = async (participant) => {
-                try {
-                    const response = await fetch(`http://localhost:3000/participants/${participant}`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        setParticipants(participants.filter(p => p !== participant));
-                        setPrizePool(prev => prev - 100);
-                    } else {
-                        alert('Ошибка при удалении участника.');
-                    }
-                } catch (error) {
-                    console.error('Ошибка удаления участника:', error);
-                    alert('Ошибка при удалении участника.');
                 }
             };
 
