@@ -105,6 +105,15 @@
 
         const { useState, useEffect, useRef } = React;
 
+        const DuplicateModal = ({ message, onClose }) => (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-4 rounded-lg max-w-xs w-full">
+              <p className="text-gray-800 mb-4">{message}</p>
+              <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={onClose}>Закрыть</button>
+            </div>
+          </div>
+        );
+
         const Wheel = ({ participants, winner, spinning, rotation, canvasSize }) => {
             const canvasRef = useRef(null);
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeead', '#d4a5a5'];
@@ -276,6 +285,7 @@
                             <ul className="list-disc pl-5">
                                 <li>Растёт на 100 ₽ за участника.</li>
                                 <li>Сбрасывается после вращения.</li>
+                                <li>15% от выигрыша направляется в фонд развития проекта и на поддержку платформы.</li>
                             </ul>
                             <p className="mt-3 mb-1"><strong>Оплата участия:</strong></p>
                             <ul className="list-disc pl-5">
@@ -399,6 +409,8 @@
             const [showPaymentModal, setShowPaymentModal] = useState(false);
             const [pendingParticipant, setPendingParticipant] = useState(null);
             const [showAdminNotification, setShowAdminNotification] = useState(false);
+            const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+            const [duplicateMessage, setDuplicateMessage] = useState('');
             const [canvasSize, setCanvasSize] = useState(400);
             const [timerEnabled, setTimerEnabled] = useState(true);
             const [rotation, setRotation] = useState(0);
@@ -513,100 +525,28 @@
             }, [timerEnabled, spinTriggered]);
 
             const handlePaymentConfirm = async (participantName) => {
-                if (participantName.trim() && !participants.includes(participantName.trim()) && !pendingParticipants.includes(participantName.trim())) {
-                    try {
-                        const response = await fetch('/pending', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: participantName.trim(), telegramId })
-                        });
-                        const result = await response.json();
-                        if (result.success) {
-                            setPendingParticipants([...pendingParticipants, participantName.trim()]);
-                            setShowAdminNotification(true);
-                            setName('');
-                            setShowPaymentModal(false); 
-                        } else {
-                            alert('Ошибка при добавлении заявки.');
-                        }
-                    } catch (error) {
-                        console.error('Ошибка добавления участника:', error);
-                        alert('Ошибка при добавлении заявки.');
-                    }
-                }
-            };
-
-            const startSpin = async () => {
-                if (participants.length === 0) {
-                    setNoParticipantsMessage('Нет участников для розыгрыша');
-                    setTimeout(() => setNoParticipantsMessage(''), 5000);
-                    return;
-                }
-
-                if (!isAdmin) {
-                    alert('Введите ID администратора для запуска розыгрыша:');
-                    const id = prompt('Введите ваш Telegram ID:');
-                    if (id !== 'YOUR_ADMIN_ID') { // Замени YOUR_ADMIN_ID на свой Telegram ID
-                        alert('Неверный ID администратора.');
-                        return;
-                    }
-                    setIsAdmin(true);
-                    setAdminId(id);
-                }
-
+                const nameTrim = participantName.trim();
+                if (!nameTrim) return;
                 try {
-                    setSpinning(true);
-                    setWinner(null);
-                    setWinnerVisible(true);
-                    setNoParticipantsMessage('');
-
-                    const response = await fetch('/spin', {
+                    const response = await fetch('/pending', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ adminId })
+                        body: JSON.stringify({ name: nameTrim, telegramId })
                     });
                     const result = await response.json();
-
-                    if (!result.success) {
-                        setNoParticipantsMessage(result.message || 'Нет участников для розыгрыша');
-                        setSpinning(false);
-                        setTimeout(() => setNoParticipantsMessage(''), 5000);
-                        return;
+                    if (result.success) {
+                        setPendingParticipants([...pendingParticipants, nameTrim]);
+                        setShowAdminNotification(true);
+                        setName('');
+                        setShowPaymentModal(false);
+                    } else {
+                        setDuplicateMessage(result.error);
+                        setShowDuplicateModal(true);
                     }
-
-                    const spinDuration = 5000;
-                    const startTime = Date.now();
-                    const initialRotation = rotationRef.current;
-                    const totalRotation = 360 * 5 + Math.random() * 360;
-
-                    const spin = () => {
-                        const elapsed = Date.now() - startTime;
-                        const progress = elapsed / spinDuration;
-                        const easeOut = 1 - Math.pow(1 - progress, 3);
-                        rotationRef.current = initialRotation + easeOut * totalRotation;
-                        setRotation(rotationRef.current % 360);
-
-                        if (elapsed < spinDuration) {
-                            requestAnimationFrame(spin);
-                        } else {
-                            setSpinning(false);
-                            const finalRotation = rotationRef.current % 360;
-                            const winnerIndex = Math.floor(((360 - finalRotation) / 360) * participants.length) % participants.length;
-                            const newWinner = participants[winnerIndex];
-                            setWinner(newWinner);
-                            setShowFireworks(true);
-                            setTimeout(() => setShowFireworks(false), 1500);
-                            setTimeout(() => {
-                                setWinner(null);
-                                setWinnerVisible(true);
-                            }, 5000);
-                        }
-                    };
-                    requestAnimationFrame(spin);
                 } catch (error) {
-                    console.error('Ошибка при запуске розыгрыша:', error);
-                    setSpinning(false);
-                    alert('Ошибка при запуске розыгрыша.');
+                    console.error('Ошибка добавления участника:', error);
+                    setDuplicateMessage('Ошибка при добавлении заявки.');
+                    setShowDuplicateModal(true);
                 }
             };
 
@@ -630,6 +570,7 @@
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
+                    {showDuplicateModal && <DuplicateModal message={duplicateMessage} onClose={() => setShowDuplicateModal(false)} />}
                     <button
                         onClick={() => setShowSidebar(true)}
                         className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
