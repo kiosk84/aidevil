@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const logger = require('./logger');
 const path = require('path');
+const bodyParser = require('body-parser');
 // Route handlers
 const participantsRoute = require('./routes/participants');
 const pendingRoute = require('./routes/pending');
@@ -252,6 +253,28 @@ bot.action(/reject_(.+)/, (ctx) => {
 
 // Express API
 const app = express();
+
+// Webhook endpoint: raw parsing to capture updates and log them
+if (process.env.HOST_URL) {
+  const hookPath = process.env.WEBHOOK_PATH || '/bot';
+  app.post(
+    hookPath,
+    bodyParser.raw({ type: 'application/json' }),
+    (req, res) => {
+      let update;
+      try {
+        update = JSON.parse(req.body);
+      } catch (err) {
+        logger.error('Webhook parse error:', err);
+        return res.status(400).send('Invalid JSON');
+      }
+      logger.info(`Webhook update received: ${JSON.stringify(update)}`);
+      return bot.handleUpdate(update, res)
+        .catch(err => logger.error('Webhook update error:', err));
+    }
+  );
+}
+
 app.use(express.json());
 app.use(cors());
 
@@ -290,8 +313,6 @@ if (HOST_URL) {
       logger.error('Ошибка установки webhook:', err);
     }
   })();
-  // Подключаем webhook middleware
-  app.use(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
 } else {
   // Local polling
   bot.launch()
