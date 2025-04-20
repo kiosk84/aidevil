@@ -98,9 +98,10 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-// Получаем telegramId из Telegram WebApp (если есть)
-const tg = window.Telegram?.WebApp;
-const telegramId = tg?.initDataUnsafe?.user?.id || null;
+        // Получаем telegramId из Telegram WebApp или из URL (параметр telegramId)
+        const tg = window.Telegram?.WebApp;
+        const urlParams = new URLSearchParams(window.location.search);
+        const telegramId = tg?.initDataUnsafe?.user?.id || urlParams.get('telegramId');
 
         const { useState, useEffect, useRef } = React;
 
@@ -386,7 +387,6 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
             const [name, setName] = useState('');
-// telegramId уже получен глобально
             const [spinning, setSpinning] = useState(false);
             const [winner, setWinner] = useState(null);
             const [countdown, setCountdown] = useState(null);
@@ -397,9 +397,6 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
             const [showInstructions, setShowInstructions] = useState(false);
             const [showWinners, setShowWinners] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
-            const handleParticipate = () => {
-                setShowPaymentModal(true);
-            };
             const [pendingParticipant, setPendingParticipant] = useState(null);
             const [showAdminNotification, setShowAdminNotification] = useState(false);
             const [canvasSize, setCanvasSize] = useState(400);
@@ -417,21 +414,21 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
 
             const fetchData = async () => {
                 try {
-                    const participantsRes = await fetch('http://localhost:3000/participants');
+                    const participantsRes = await fetch('/participants');
                     const participantsData = await participantsRes.json();
                     setParticipants(participantsData);
 
-                    const pendingRes = await fetch('http://localhost:3000/pending');
+                    const pendingRes = await fetch('/pending');
                     const pendingData = await pendingRes.json();
                     setPendingParticipants(pendingData);
                     setPendingParticipant(pendingData[0] || null);
                     setShowAdminNotification(!!pendingData[0]);
 
-                    const winnersRes = await fetch('http://localhost:3000/winners');
+                    const winnersRes = await fetch('/winners');
                     const winnersData = await winnersRes.json();
                     setWinnersHistory(winnersData);
 
-                    const prizePoolRes = await fetch('http://localhost:3000/prizepool');
+                    const prizePoolRes = await fetch('/prizepool');
                     const prizePoolData = await prizePoolRes.json();
                     setPrizePool(prizePoolData.amount);
 
@@ -563,7 +560,7 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                     setWinnerVisible(true);
                     setNoParticipantsMessage('');
 
-                    const response = await fetch('http://localhost:3000/spin', {
+                    const response = await fetch('/spin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ adminId })
@@ -627,6 +624,9 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                 }
                 prevPendingRef.current = pendingParticipants;
             }, [pendingParticipants]);
+
+            // Обработчик кнопки "Участвовать" (открывает окно оплаты)
+            const handleParticipate = () => setShowPaymentModal(true);
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
