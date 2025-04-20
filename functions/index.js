@@ -54,16 +54,16 @@ db.serialize(() => {
 // Обработка команды /start (только для админа)
 bot.command('start', (ctx) => {
   if (ctx.from.id.toString() === ADMIN_ID) {
-    ctx.reply('Добро пожаловать, админ!\nДоступные команды:\n' +
-      '/start - Начать работу с ботом\n' +
-      '/help - Показать список команд\n' +
-      '/participants - Список участников\n' +
-      '/winners - История победителей\n' +
-      '/prizepool - Текущий призовой фонд\n' +
-      '/approve <имя> - Подтвердить участника\n' +
-      '/reject <имя> - Отклонить участника\n' +
-      '/reset - Сбросить все данные\n' +
-      '/spin - Провести тестовый спин');
+    ctx.reply('Добро пожаловать, админ!', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }],
+          [{ text: 'Список участников', callback_data: 'getParticipants' }, { text: 'История победителей', callback_data: 'getWinners' }],
+          [{ text: 'Призовой фонд', callback_data: 'getPrizePool' }, { text: 'Сброс', callback_data: 'reset' }],
+          [{ text: 'Spin', callback_data: 'spin' }, { text: 'Удалить участника', callback_data: 'deletePrompt' }]
+        ]
+      }
+    });
   } else {
     ctx.reply(`👋 Добро пожаловать в игру «Колесо Фортуны»!
 ✨ Ты на шаг ближе к тому, чтобы испытать удачу и сорвать куш! 🔥
@@ -75,7 +75,7 @@ bot.command('start', (ctx) => {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '➡️ Открыть приложение ➡️', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }
+            { text: '➡️ Открыть приложение ', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }
           ],
           [
             { text: '🔵 Официальный канал', url: 'https://t.me/channel_fortune' }
@@ -296,6 +296,80 @@ bot.command('reset', (ctx) => {
     db.run('UPDATE prize_pool SET amount = 0 WHERE id = 1');
   });
   ctx.reply('Данные очищены: участники, ожидающие, победители удалены, призовой фонд сброшен.');
+});
+
+// Команда удаления участника (только для админа)
+bot.command('delete', (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  const parts = ctx.message.text.split(' ');
+  if (parts.length < 2) return ctx.reply('Укажите имя: /delete <имя>');
+  const name = parts.slice(1).join(' ');
+  db.serialize(() => {
+    db.run('DELETE FROM participants WHERE name = ?', [name]);
+    db.run('DELETE FROM pending WHERE name = ?', [name]);
+  });
+  ctx.reply(`Участник ${name} удалён.`);
+});
+
+// Callback actions for inline buttons
+bot.action('getParticipants', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  db.all('SELECT name FROM participants', (err, rows) => {
+    if (err) return ctx.reply('Ошибка');
+    const list = rows.map(r => r.name).join('\n') || 'Пусто';
+    ctx.reply(`Список участников:\n${list}`);
+  });
+});
+
+bot.action('getWinners', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  db.all('SELECT name, prize FROM winners', (err, rows) => {
+    if (err) return ctx.reply('Ошибка');
+    const list = rows.map(r => `${r.name} — ${r.prize}₽`).join('\n') || 'Пусто';
+    ctx.reply(`История победителей:\n${list}`);
+  });
+});
+
+bot.action('getPrizePool', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  db.get('SELECT amount FROM prize_pool WHERE id = 1', (err, row) => {
+    if (err) return ctx.reply('Ошибка');
+    ctx.reply(`Текущий призовой фонд: ${row.amount}₽`);
+  });
+});
+
+bot.action('reset', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  db.serialize(() => {
+    db.run('DELETE FROM participants');
+    db.run('DELETE FROM pending');
+    db.run('DELETE FROM winners');
+    db.run('UPDATE prize_pool SET amount = 0 WHERE id = 1');
+  });
+  ctx.reply('Данные очищены.');
+});
+
+bot.action('spin', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  ctx.reply('🎡 Крутим колесо...').then(() => {
+    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
+      const winner = rows[Math.floor(Math.random() * rows.length)];
+      const prize = Math.floor(Math.random() * 1000);
+      db.run('INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)', [winner.name, winner.telegramId, prize, Date.now()]);
+      ctx.reply(`Победитель: ${winner.name}, приз: ${prize}₽`);
+    });
+  });
+});
+
+bot.action('deletePrompt', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  ctx.reply('Введите имя участника для удаления: /delete <имя>');
 });
 
 // Express API
