@@ -11,6 +11,23 @@ router.get('/', (req, res) => {
   });
 });
 
+// GET /pending/check?telegramId=...  Проверка участия по telegramId
+router.get('/check', (req, res) => {
+  const telegramId = req.query.telegramId;
+  if (!telegramId) return res.status(400).json({ error: 'telegramId required' });
+  // Проверяем pending
+  db.get('SELECT 1 FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (row) return res.status(409).json({ error: 'Вы уже участвуете в розыгрыше. Дождитесь результатов.' });
+    // Проверяем participants
+    db.get('SELECT 1 FROM participants WHERE telegramId = ?', [telegramId], (err2, row2) => {
+      if (err2) return res.status(500).json({ error: 'Database error' });
+      if (row2) return res.status(409).json({ error: 'Вы уже участвуете в розыгрыше. Дождитесь результатов.' });
+      res.json({ success: true });
+    });
+  });
+});
+
 // POST /pending
 router.post('/', (req, res) => {
   const { name, telegramId } = req.body;

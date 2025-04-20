@@ -575,7 +575,22 @@
             }, [pendingParticipants]);
 
             // Обработчик кнопки "Участвовать" (открывает окно оплаты)
-            const handleParticipate = () => setShowPaymentModal(true);
+            const handleParticipate = async () => {
+                try {
+                    const res = await fetch(`/pending/check?telegramId=${telegramId}`);
+                    const result = await res.json();
+                    if (!res.ok) {
+                        setDuplicateMessage(result.error);
+                        setShowDuplicateModal(true);
+                    } else {
+                        setShowPaymentModal(true);
+                    }
+                } catch (error) {
+                    console.error('Ошибка проверки участия:', error);
+                    setDuplicateMessage('Ошибка при проверке участия');
+                    setShowDuplicateModal(true);
+                }
+            };
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
