@@ -55,11 +55,14 @@ bot.command('start', (ctx) => {
   if (ctx.from.id.toString() === ADMIN_ID) {
     ctx.reply('Добро пожаловать, админ!\nДоступные команды:\n/start - Начать работу с ботом\n/help - Показать список команд\n/participants - Список участников\n/winners - История победителей\n/prizepool - Текущий призовой фонд\n/approve <имя> - Подтвердить участника\n/reject <имя> - Отклонить участника');
   } else {
-    ctx.reply('Добро пожаловать! Это бот, в котором ты можешь выиграть крупную сумму денег. Открой приложение и участвуй — твой Telegram ID будет зарегистрирован автоматически!', {
+    ctx.reply('Добро пожаловать! Это бот, в котором ты можешь выиграть крупную сумму денег.', {
       reply_markup: {
         inline_keyboard: [
           [
             { text: 'Открыть приложение', web_app: { url: 'https://aidevil-production.up.railway.app' } }
+          ],
+          [
+            { text: 'Участвовать', callback_data: 'participate' }
           ],
           [
             { text: '🔵 Официальный канал', url: 'https://t.me/channel_fortune' }
@@ -248,6 +251,34 @@ bot.action(/reject_(.+)/, (ctx) => {
     ctx.reply(`Участник ${name} отклонён.`);
     ctx.answerCbQuery();
   });
+});
+
+// Обработчик нажатия «Участвовать»
+bot.on('callback_query', (ctx) => {
+  const data = ctx.callbackQuery.data;
+  if (data === 'participate') {
+    const name = `${ctx.from.first_name}${ctx.from.last_name ? ' ' + ctx.from.last_name : ''}`;
+    const telegramId = ctx.from.id.toString();
+    db.get('SELECT * FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
+      if (err) return ctx.answerCbQuery('Ошибка сервера');
+      if (row) return ctx.answerCbQuery('Вы уже подали заявку');
+      db.get('SELECT * FROM participants WHERE telegramId = ?', [telegramId], (err2, row2) => {
+        if (err2) return ctx.answerCbQuery('Ошибка сервера');
+        if (row2) return ctx.answerCbQuery('Вы уже участвуете');
+        db.run('INSERT INTO pending (name, telegramId) VALUES (?, ?)', [name, telegramId], (err3) => {
+          if (err3) return ctx.answerCbQuery('Ошибка сохранения');
+          ctx.answerCbQuery('Заявка отправлена');
+          bot.telegram.sendMessage(ADMIN_ID,
+            `Новая заявка на участие:\nИмя: ${name}\nTelegram ID: ${telegramId}`,
+            { reply_markup: { inline_keyboard: [[
+              { text: '✅ Подтвердить', callback_data: `approve_${name}` },
+              { text: '❌ Отклонить', callback_data: `reject_${name}` }
+            ]] } }
+          );
+        });
+      });
+    });
+  }
 });
 
 // Express API
