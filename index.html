@@ -399,10 +399,6 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
             const [winnersHistory, setWinnersHistory] = useState([]);
             const [showFireworks, setShowFireworks] = useState(false);
             const [showSidebar, setShowSidebar] = useState(false);
-            // Исправление: функция для кнопки "Участвовать"
-            const handleParticipate = () => {
-                setShowPaymentModal(true);
-            };
             const [showInstructions, setShowInstructions] = useState(false);
             const [showWinners, setShowWinners] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -725,7 +721,8 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
                         <div className="flex flex-col mb-2">
                             <button
-                                onClick={handleParticipate}
+                                // onClick={() => setShowPaymentModal(true)} // временно отключено
+                                onClick={() => {}}
                                 className="participate-btn px-4 py-2 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
                                 disabled={spinning}
                             >
