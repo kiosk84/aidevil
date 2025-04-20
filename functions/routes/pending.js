@@ -42,7 +42,11 @@ router.post('/', (req, res) => {
       const newId = `admin_${Date.now()}`;
       db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, newId], (err2) => {
         if (err2) return res.status(500).json({ error: 'DB error' });
-        return res.json({ success: true, admin: true });
+        // Increment prize pool
+        db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1', (err3) => {
+          if (err3) console.error('Prize pool update error:', err3);
+          return res.json({ success: true, admin: true });
+        });
       });
     });
     return;
