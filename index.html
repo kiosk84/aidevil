@@ -524,13 +524,14 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                             setShowAdminNotification(true);
                             setName('');
                             setShowPaymentModal(false); // Просто закрываем окно оплаты, никаких alert
-                        } else {
-                            alert('Ошибка при добавлении заявки.');
-                        }
-                    } catch (error) {
-                        console.error('Ошибка добавления участника:', error);
+                        } 
+                    } else {
                         alert('Ошибка при добавлении заявки.');
                     }
+                } catch (error) {
+                    console.error('Ошибка добавления участника:', error);
+                    alert('Ошибка при добавлении заявки.');
+                }
                 }
             };
 
