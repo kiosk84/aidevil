@@ -105,14 +105,23 @@
 
         const { useState, useEffect, useRef } = React;
 
-        const DuplicateModal = ({ message, onClose }) => (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-4 rounded-lg max-w-xs w-full">
-              <p className="text-gray-800 mb-4">{message}</p>
-              <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={onClose}>Закрыть</button>
-            </div>
-          </div>
-        );
+        const DuplicateModal = ({ isOpen, message, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Уведомление</h2>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">{message}</p>
+                        <button
+                            onClick={onClose}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            );
+        };
 
         const Wheel = ({ participants, winner, spinning, rotation, canvasSize }) => {
             const canvasRef = useRef(null);
@@ -570,7 +579,11 @@
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
-                    {showDuplicateModal && <DuplicateModal message={duplicateMessage} onClose={() => setShowDuplicateModal(false)} />}
+                    <DuplicateModal
+                        isOpen={showDuplicateModal}
+                        message={duplicateMessage}
+                        onClose={() => setShowDuplicateModal(false)}
+                    />
                     <button
                         onClick={() => setShowSidebar(true)}
                         className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
