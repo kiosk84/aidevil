@@ -318,7 +318,7 @@ if (HOST_URL) {
       logger.error('Ошибка установки webhook:', err);
     }
   })();
-  app.use(WEBHOOK_PATH, bot.webhookCallback(WEBHOOK_PATH));
+  app.use(WEBHOOK_PATH, bot.webhookCallback());
 } else {
   // Local polling
   bot.launch()
