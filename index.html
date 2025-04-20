@@ -399,6 +399,10 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
             const [winnersHistory, setWinnersHistory] = useState([]);
             const [showFireworks, setShowFireworks] = useState(false);
             const [showSidebar, setShowSidebar] = useState(false);
+            // Исправление: функция для кнопки "Участвовать"
+            const handleParticipate = () => {
+                setShowPaymentModal(true);
+            };
             const [showInstructions, setShowInstructions] = useState(false);
             const [showWinners, setShowWinners] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
