@@ -383,11 +383,6 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
         };
 
         const App = () => {
-    useEffect(() => {
-        if (!telegramId) {
-            alert('Пожалуйста, откройте приложение через Telegram-бота для участия!');
-        }
-    }, []);
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
             const [name, setName] = useState('');
@@ -402,6 +397,9 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
             const [showInstructions, setShowInstructions] = useState(false);
             const [showWinners, setShowWinners] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
+            const handleParticipate = () => {
+                setShowPaymentModal(true);
+            };
             const [pendingParticipant, setPendingParticipant] = useState(null);
             const [showAdminNotification, setShowAdminNotification] = useState(false);
             const [canvasSize, setCanvasSize] = useState(400);
@@ -721,8 +719,7 @@ const telegramId = tg?.initDataUnsafe?.user?.id || null;
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
                         <div className="flex flex-col mb-2">
                             <button
-                                // onClick={() => setShowPaymentModal(true)} // временно отключено
-                                onClick={() => {}}
+                                onClick={handleParticipate}
                                 className="participate-btn px-4 py-2 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
                                 disabled={spinning}
                             >
