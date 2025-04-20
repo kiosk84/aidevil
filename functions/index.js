@@ -257,6 +257,38 @@ bot.action(/reject_(.+)/, (ctx) => {
   });
 });
 
+// Тестовый спин для определения победителя (только для админа)
+bot.command('spin', (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.reply('🎡 Крутим колесо...').then(() => {
+    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
+      if (err) { ctx.reply('Ошибка БД при выборке участников.'); return; }
+      if (!rows || rows.length === 0) { ctx.reply('Нет участников для спина.'); return; }
+      const winner = rows[Math.floor(Math.random() * rows.length)];
+      const prize = Math.floor(Math.random() * 1000) + 100;
+      const timestamp = Date.now();
+      db.run(
+        'INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)',
+        [winner.name, winner.telegramId, prize, timestamp],
+        (err) => { if (err) logger.error('Ошибка вставки победителя:', err); }
+      );
+      ctx.reply(`🎊 Победитель: ${winner.name}! Приз: ${prize}₽`);
+    });
+  });
+});
+
+// Команда сброса всех данных (только для админа)
+bot.command('reset', (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  db.serialize(() => {
+    db.run('DELETE FROM participants');
+    db.run('DELETE FROM pending');
+    db.run('DELETE FROM winners');
+    db.run('UPDATE prize_pool SET amount = 0 WHERE id = 1');
+  });
+  ctx.reply('Данные очищены: участники, ожидающие, победители удалены, призовой фонд сброшен.');
+});
+
 // Express API
 const app = express();
 
