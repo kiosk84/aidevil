@@ -4,7 +4,6 @@ const { bot, ADMIN_ID } = require('./bot');
 const express = require('express');
 const cors = require('cors');
 const logger = require('./logger');
-const path = require('path');
 const bodyParser = require('body-parser');
 // Route handlers
 const participantsRoute = require('./routes/participants');
@@ -413,8 +412,7 @@ bot.command('settimer', (ctx) => {
 const app = express();
 
 // Serve static front-end files
-const path = require('path');
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(require('path').join(__dirname, '..')));
 
 // Enable CORS
 app.use(cors());
@@ -447,7 +445,7 @@ app.use(cors());
 
 // Главная страница
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+  res.sendFile(require('path').join(__dirname, '..', 'index.html'));
 });
 
 // Подключение маршрутов
@@ -457,6 +455,14 @@ app.use('/winners', winnersRoute);
 app.use('/prizepool', prizepoolRoute);
 app.use('/spin', spinRoute);
 app.use('/timer', timerRoute);
+
+// Запуск сервера и глобальный обработчик ошибок Express
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => logger.info(`Server listening on ${PORT}`));
+app.use((err, req, res, next) => {
+  logger.error('Unhandled Express error', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // Запуск бота: polling локально, webhook в продакшн
 bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));
@@ -487,10 +493,6 @@ if (HOST_URL) {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-// Запуск сервера
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => logger.info(`API запущен на http://localhost:${PORT}`));
-
 // Закрытие базы
 process.on('SIGINT', () => {
   db.close((err) => {
@@ -500,10 +502,4 @@ process.on('SIGINT', () => {
     logger.info('База закрыта');
     process.exit();
   });
-});
-
-// Глобальный обработчик ошибок Express
-app.use((err, req, res, next) => {
-  logger.error('Unhandled Express error', err);
-  res.status(500).json({ error: 'Internal server error' });
 });
