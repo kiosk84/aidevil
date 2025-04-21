@@ -82,6 +82,10 @@ router.post('/', (req, res) => {
             }
           );
           res.json({ success: true });
+          // Increment prize pool when user payment confirmed
+          db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1', (err5) => {
+            if (err5) console.error('Prize pool update error:', err5);
+          });
         });
       });
     });

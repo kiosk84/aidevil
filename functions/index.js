@@ -445,9 +445,33 @@ bot.action('deletePrompt', async (ctx) => {
 });
 
 bot.action('timerPrompt', async (ctx) => {
-  if (ctx.from.id.toString() !== ADMIN_ID) return;
-  ctx.answerCbQuery();
-  ctx.reply('Введите время автоспина в формате HH:MM: /settimer HH:MM');
+  await ctx.answerCbQuery();
+  const adminId = ctx.from.id.toString();
+  if (adminId !== ADMIN_ID) return;
+  pendingTimer[adminId] = true;
+  await ctx.reply('Введите время для следующего розыгрыша в формате HH:MM');
+});
+
+// Перехватываем текст после запроса времени
+bot.on('text', async (ctx) => {
+  const userId = ctx.from.id.toString();
+  if (!pendingTimer[userId]) return;
+  const time = ctx.message.text.trim();
+  const pattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!pattern.test(time)) {
+    return ctx.reply('Неверный формат времени. Пожалуйста, введите HH:MM');
+  }
+  try {
+    const res = await fetch(`${process.env.HOST_URL}/timer`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await ctx.reply(`Время розыгрыша установлено на ${time}`);
+  } catch (err) {
+    console.error('Timer update error:', err);
+    await ctx.reply('Ошибка при обновлении времени на сервере');
+  }
+  delete pendingTimer[userId];
 });
 
 // Команда установки таймера автоспина (только для админа)

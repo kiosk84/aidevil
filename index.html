@@ -122,9 +122,10 @@
                 }
             }, [mustStartSpinning, data, spinTime, onStopSpinning]);
             const seg = 360 / (data.length || 1);
-            const baseColors = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#93c5fd','#3b82f6','#2563eb'];
+            // Generate distinct HSL colors for each segment
             const grad = data.length > 0 ? data.map((item, i) => {
-                const color = item.color || baseColors[i % baseColors.length];
+                const hue = (360 / data.length) * i;
+                const color = item.color || `hsl(${hue}, 70%, 50%)`;
                 return `${color} ${i * seg}deg ${(i + 1) * seg}deg`;
             }).join(',') : '#444 0deg 360deg';
             return (
@@ -151,7 +152,7 @@
                             width: '300px', height: '300px',
                             background: `conic-gradient(${grad})`,
                             position: 'relative', zIndex: 2,
-                            boxShadow: '0 0 20px rgba(30, 64, 175, 0.7)',
+                            boxShadow: '0 0 40px 12px rgba(30, 64, 175, 0.9)',
                         }}
                     />
                     {/* Segment labels */}
@@ -251,7 +252,7 @@
         const DuplicateModal = ({ isOpen, message, onClose }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 flex items-center justify-center modal z-70 px-2">
+                <div className="fixed inset-0 flex items-center justify-center modal px-2" style={{ zIndex: 1000 }}>
                     <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Уведомление</h2>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">{message}</p>
@@ -494,33 +495,47 @@
             const spinTriggeredRef = useRef(false);
 
             const fetchData = async () => {
+                // Fetch participants
                 try {
-                    const participantsRes = await fetch(`${BASE_URL}/participants`);
-                    const participantsData = participantsRes.ok ? await participantsRes.json() : [];
-                    setParticipants(participantsData);
-
-                    const pendingRes = await fetch(`${BASE_URL}/pending`);
-                    const pendingData = pendingRes.ok ? await pendingData.json() : [];
-                    setPendingParticipants(pendingData);
-                    setPendingParticipant(pendingData[0] || null);
-                    setShowAdminNotification(!!pendingData[0]);
-
-                    const winnersRes = await fetch(`${BASE_URL}/winners`);
-                    const winnersData = winnersRes.ok ? await winnersData.json() : [];
-                    setWinnersHistory(winnersData);
-
-                    const prizePoolRes = await fetch(`${BASE_URL}/prizepool`);
-                    const prizePoolData = prizePoolRes.ok ? await prizePoolData.json() : { amount: 0 };
-                    setPrizePool(prizePoolData.amount);
-
-                    const timerRes = await fetch(`${BASE_URL}/timer`);
-                    const timerData = timerRes.ok ? await timerData.json() : { time: '20:00' };
-                    setScheduledTime(timerData.time);
+                    const res = await fetch(`${BASE_URL}/participants`);
+                    const data = res.ok ? await res.json() : [];
+                    setParticipants(data);
                 } catch (error) {
-                    console.error('Ошибка получения данных:', error);
-                    // В продакшн скрываем всплывающее окно об ошибке при fetchData
-                    // setDuplicateMessage('Ошибка загрузки данных');
-                    // setShowDuplicateModal(true);
+                    console.error('Error fetching participants:', error);
+                }
+                // Fetch pending
+                try {
+                    const res = await fetch(`${BASE_URL}/pending`);
+                    const data = res.ok ? await res.json() : [];
+                    setPendingParticipants(data);
+                    setPendingParticipant(data[0] || null);
+                    setShowAdminNotification(!!data[0]);
+                } catch (error) {
+                    console.error('Error fetching pending:', error);
+                }
+                // Fetch winners
+                try {
+                    const res = await fetch(`${BASE_URL}/winners`);
+                    const data = res.ok ? await res.json() : [];
+                    setWinnersHistory(data);
+                } catch (error) {
+                    console.error('Error fetching winners:', error);
+                }
+                // Fetch prize pool
+                try {
+                    const res = await fetch(`${BASE_URL}/prizepool`);
+                    const data = res.ok ? await res.json() : { amount: 0 };
+                    setPrizePool(data.amount);
+                } catch (error) {
+                    console.error('Error fetching prize pool:', error);
+                }
+                // Fetch timer
+                try {
+                    const res = await fetch(`${BASE_URL}/timer`);
+                    const data = res.ok ? await res.json() : { time: '20:00' };
+                    setScheduledTime(data.time);
+                } catch (error) {
+                    console.error('Error fetching timer:', error);
                 }
             };
 
@@ -644,6 +659,7 @@
                         setShowPaymentModal(false);
                         setShowReviewModal(true);
                         setName('');
+                        fetchData();
                     }
                 } catch (error) {
                     console.error('Ошибка при подтверждении оплаты:', error);
@@ -793,15 +809,14 @@
                     </div>
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
                         <div className="flex flex-col mb-2">
-                            {isAdmin && (
-                                <button
-                                    onClick={() => setIsSpinning(true)}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 transition-all duration-200 mb-2"
-                                    disabled={isSpinning}
-                                >
-                                    Запустить
-                                </button>
-                            )}
+                            {/* Temporary launch button for testing */}
+                            <button
+                                onClick={() => setIsSpinning(true)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 transition-all duration-200 mb-2"
+                                disabled={isSpinning}
+                            >
+                                Запустить
+                            </button>
                             <button
                                 onClick={handleParticipate}
                                 className="participate-btn px-4 py-2 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
