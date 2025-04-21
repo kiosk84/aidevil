@@ -102,6 +102,11 @@
         const tg = window.Telegram?.WebApp;
         const urlParams = new URLSearchParams(window.location.search);
         const telegramId = tg?.initDataUnsafe?.user?.id || urlParams.get('telegramId');
+        const ADMIN_ID = '123456789'; // замените на свой
+        const isAdmin = telegramId?.toString() === ADMIN_ID;
+
+        // Backend API base URL (порт вашего бэкенда)
+        const BASE_URL = 'http://localhost:3000';
 
         const { useState, useEffect, useRef } = React;
 
@@ -402,6 +407,43 @@
             );
         };
 
+        const AdminPanelModal = ({ isOpen, time, onClose, onSave }) => {
+            if (!isOpen) return null;
+
+            const [newTime, setNewTime] = useState(time);
+
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Admin Panel</h2>
+                        <div className="mb-3">
+                            <label className="block text-gray-300 mb-1 text-sm sm:text-base">Время розыгрыша</label>
+                            <input
+                                type="time"
+                                value={newTime}
+                                onChange={(e) => setNewTime(e.target.value)}
+                                className="p-2 w-full bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={() => onSave(newTime)}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex-1 text-sm"
+                            >
+                                Сохранить
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex-1 text-sm"
+                            >
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
@@ -410,7 +452,7 @@
             const [winner, setWinner] = useState(null);
             const [countdown, setCountdown] = useState(null);
             const [prizePool, setPrizePool] = useState(0);
-            const [winnersHistory, setWinnersHistory] = useState([]);
+            const [winnersHistory, setWinnersHistory] = useState([]); // История победителей
             const [showFireworks, setShowFireworks] = useState(false);
             const [showSidebar, setShowSidebar] = useState(false);
             const [showInstructions, setShowInstructions] = useState(false);
@@ -418,6 +460,8 @@
             const [showPaymentModal, setShowPaymentModal] = useState(false);
             const [pendingParticipant, setPendingParticipant] = useState(null);
             const [showAdminNotification, setShowAdminNotification] = useState(false);
+            const [showAdminPanel, setShowAdminPanel] = useState(false);
+            const [scheduledTime, setScheduledTime] = useState('20:00');
             const [showDuplicateModal, setShowDuplicateModal] = useState(false);
             const [duplicateMessage, setDuplicateMessage] = useState('');
             const [canvasSize, setCanvasSize] = useState(400);
@@ -426,8 +470,6 @@
             const [spinTriggered, setSpinTriggered] = useState(false);
             const [noParticipantsMessage, setNoParticipantsMessage] = useState('');
             const [winnerVisible, setWinnerVisible] = useState(true);
-            const [isAdmin, setIsAdmin] = useState(false);
-            const [adminId, setAdminId] = useState('');
             const wheelRef = useRef(null);
             const rotationRef = useRef(0);
             const winnerTimeoutRef = useRef(null);
@@ -435,23 +477,27 @@
 
             const fetchData = async () => {
                 try {
-                    const participantsRes = await fetch('/participants');
-                    const participantsData = await participantsRes.json();
+                    const participantsRes = await fetch(`${BASE_URL}/participants`);
+                    const participantsData = participantsRes.ok ? await participantsRes.json() : [];
                     setParticipants(participantsData);
 
-                    const pendingRes = await fetch('/pending');
-                    const pendingData = await pendingRes.json();
+                    const pendingRes = await fetch(`${BASE_URL}/pending`);
+                    const pendingData = pendingRes.ok ? await pendingRes.json() : [];
                     setPendingParticipants(pendingData);
                     setPendingParticipant(pendingData[0] || null);
                     setShowAdminNotification(!!pendingData[0]);
 
-                    const winnersRes = await fetch('/winners');
-                    const winnersData = await winnersRes.json();
-                    setWinnersHistory(winnersData);
+                    const winnersRes = await fetch(`${BASE_URL}/winners`);
+                    const winnersData = winnersRes.ok ? await winnersRes.json() : [];
+                    setWinnersHistory(winnersData); // Обновляем историю победителей
 
-                    const prizePoolRes = await fetch('/prizepool');
-                    const prizePoolData = await prizePoolRes.json();
+                    const prizePoolRes = await fetch(`${BASE_URL}/prizepool`);
+                    const prizePoolData = prizePoolRes.ok ? await prizePoolRes.json() : { amount: 0 };
                     setPrizePool(prizePoolData.amount);
+
+                    const timerRes = await fetch(`${BASE_URL}/timer`);
+                    const timerData = timerRes.ok ? await timerRes.json() : { time: '00:00' };
+                    setScheduledTime(timerData.time);
 
                     // Проверяем, что все данные загружены, прежде чем запускать салют
                     if (
@@ -504,8 +550,9 @@
 
                 const getNextSpinTime = () => {
                     const now = new Date();
+                    const [hh, mm] = scheduledTime.split(':').map(Number);
                     const targetTime = new Date();
-                    targetTime.setHours(20, 0, 0, 0);
+                    targetTime.setHours(hh, mm, 0, 0);
                     if (now >= targetTime) {
                         targetTime.setDate(targetTime.getDate() + 1);
                     }
@@ -531,13 +578,13 @@
                 }, 1000);
 
                 return () => clearInterval(interval);
-            }, [timerEnabled, spinTriggered]);
+            }, [timerEnabled, spinTriggered, scheduledTime]);
 
             const handlePaymentConfirm = async (participantName) => {
                 const nameTrim = participantName.trim();
                 if (!nameTrim) return;
                 try {
-                    const response = await fetch('/pending', {
+                    const response = await fetch(`${BASE_URL}/pending`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: nameTrim, telegramId })
@@ -586,7 +633,7 @@
                     return;
                 }
                 try {
-                    const res = await fetch(`/pending/check?telegramId=${telegramId}`);
+                    const res = await fetch(`${BASE_URL}/pending/check?telegramId=${telegramId}`);
                     const result = await res.json();
                     if (!res.ok) {
                         setDuplicateMessage(result.error);
@@ -600,6 +647,37 @@
                     setShowDuplicateModal(true);
                 }
             };
+
+            // Автоматический спин при наступлении времени
+            const handleAutoSpin = async () => {
+                try {
+                    setSpinning(true);
+                    const res = await fetch(`${BASE_URL}/spin`, { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) {
+                        const winnerName = data.winner;
+                        const idx = participants.findIndex(p => p === winnerName);
+                        const segmentAngle = 360 / participants.length;
+                        const extraRot = 360 * 3;
+                        const finalRot = extraRot + (360 - idx * segmentAngle - segmentAngle / 2);
+                        setRotation(rotation + finalRot);
+                        setTimeout(() => {
+                            setWinner(winnerName);
+                            setSpinning(false);
+                            setSpinTriggered(false);
+                            setShowFireworks(true);
+                            setTimeout(() => setShowFireworks(false), 1500);
+                        }, 3000);
+                    }
+                } catch (err) { console.error('Auto spin error:', err); }
+            };
+
+            // Запуск автоспина по триггеру
+            useEffect(() => {
+                if (spinTriggered && !spinning) {
+                    handleAutoSpin();
+                }
+            }, [spinTriggered]);
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
@@ -629,23 +707,31 @@
                         </button>
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Меню</h2>
                         <button
-                            className="w-full px-3 py-1 bg-gray-700 text-white rounded-lg text-left text-sm opacity-70 cursor-not-allowed mb-1"
                             disabled
+                            className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg text-left text-sm mb-2"
                         >
                             Личный кабинет (в разработке)
                         </button>
                         <button
                             onClick={() => { setShowInstructions(true); setShowSidebar(false); }}
-                            className="w-full px-3 py-1 mb-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm"
+                            className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm mb-2"
                         >
                             Инструкция
                         </button>
                         <button
                             onClick={() => { setShowWinners(true); setShowSidebar(false); }}
-                            className="w-full px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm"
+                            className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm mb-2"
                         >
                             История победителей
                         </button>
+                        {isAdmin && (
+                            <button
+                                onClick={() => { setShowAdminPanel(true); setShowSidebar(false); }}
+                                className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-left text-sm mb-2"
+                            >
+                                Admin Panel
+                            </button>
+                        )}
                     </div>
                     <InstructionsModal isOpen={showInstructions} onClose={() => setShowInstructions(false)} />
                     <WinnersModal isOpen={showWinners} onClose={() => setShowWinners(false)} winnersHistory={winnersHistory} />
@@ -660,6 +746,18 @@
                         isOpen={showAdminNotification}
                         pendingParticipant={pendingParticipant}
                     />
+                    {isAdmin && (
+                        <AdminPanelModal
+                            isOpen={showAdminPanel}
+                            time={scheduledTime}
+                            onClose={() => setShowAdminPanel(false)}
+                            onSave={async (newTime) => {
+                                await fetch(`${BASE_URL}/timer`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ time: newTime }) });
+                                setScheduledTime(newTime);
+                                setShowAdminPanel(false);
+                            }}
+                        />
+                    )}
                     <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
                         <div style={{position:'relative', display:'inline-block', width:'100%'}}>
                             <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
@@ -679,7 +777,7 @@
                         
                         {countdown && timerEnabled && (
                             <div className="text-center mb-3">
-                                <h2 className="text-lg sm:text-xl font-bold gradient-text mb-1">Следующий розыгрыш</h2>
+                                <h2 className="text-lg sm:text-xl font-bold mb-1" style={{ WebkitTextStroke: '0.5px #1E40AF', color: '#FFD700' }}>Следующий розыгрыш</h2>
                                 <p className="text-base sm:text-lg text-gray-300 digital-timer">
                                     Запуск через: <span style={{fontSize:'1.35em', color:'#fff', fontWeight:'bold', textShadow:'0 2px 8px #000, 0 0 2px #fff'}}>{countdown}</span>
                                 </p>
