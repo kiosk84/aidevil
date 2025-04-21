@@ -591,8 +591,8 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: nameTrim, telegramId })
                     });
-                    console.log('POST /pending status:', response.status, 'result:', await response.json());
                     const result = await response.json();
+                    console.log('POST /pending status:', response.status, 'result:', result);
                     if (!response.ok) {
                         setDuplicateMessage(result.error || `Ошибка: ${response.status}`);
                         setShowDuplicateModal(true);
@@ -607,6 +607,7 @@
                     }
                     setName('');
                     setShowPaymentModal(false);
+                    setShowDuplicateModal(false);
                 } catch (error) {
                     console.error('Ошибка добавления участника:', error);
                     setDuplicateMessage('Ошибка при добавлении заявки.');
@@ -688,6 +689,15 @@
                     handleAutoSpin();
                 }
             }, [spinTriggered]);
+
+            // Тестовый интервал: каждые 5 минут обновлять данные и крутить колесо
+            useEffect(() => {
+                const testTimer = setInterval(() => {
+                    fetchData();
+                    handleAutoSpin();
+                }, 300000); // 5 min
+                return () => clearInterval(testTimer);
+            }, []);
 
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
