@@ -122,19 +122,54 @@
                 }
             }, [mustStartSpinning, data, spinTime, onStopSpinning]);
             const seg = 360 / (data.length || 1);
-            const grad = data.length > 0 ? data.map((item, i) =>
-                `${item.color || '#' + Math.floor(Math.random() * 16777215).toString(16)} ${i * seg}deg ${(i + 1) * seg}deg`
-            ).join(',') : '#444 0deg 360deg';
+            const baseColors = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#93c5fd','#3b82f6','#2563eb'];
+            const grad = data.length > 0 ? data.map((item, i) => {
+                const color = item.color || baseColors[i % baseColors.length];
+                return `${color} ${i * seg}deg ${(i + 1) * seg}deg`;
+            }).join(',') : '#444 0deg 360deg';
             return (
-                <div
-                    ref={wheelRef}
-                    className="wheel"
-                    style={{
-                        width: '300px',
-                        height: '300px',
-                        background: `conic-gradient(${grad})`,
-                    }}
-                />
+                <div style={{ position: 'relative', width: '300px', height: '300px' }}>
+                    {/* Red marker triangle */}
+                    <div style={{
+                        position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
+                        width: 0, height: 0,
+                        borderLeft: '10px solid transparent', borderRight: '10px solid transparent',
+                        borderBottom: '20px solid red', zIndex: 4,
+                    }} />
+                    <div style={{
+                        position: 'absolute', left: '50%', top: '60%',
+                        transform: 'translateX(-50%)',
+                        width: '80%', height: '20px',
+                        background: 'rgba(30, 64, 175, 0.5)',
+                        filter: 'blur(12px)',
+                        borderRadius: '50%', zIndex: 1,
+                    }} />
+                    <div
+                        ref={wheelRef}
+                        className="wheel"
+                        style={{
+                            width: '300px', height: '300px',
+                            background: `conic-gradient(${grad})`,
+                            position: 'relative', zIndex: 2,
+                        }}
+                    />
+                    {/* Segment labels */}
+                    {data.length > 0 && data.map((item, i) => {
+                        const angle = (i * seg + seg / 2) * Math.PI / 180;
+                        const x = 150 + Math.cos(angle) * 120;
+                        const y = 150 + Math.sin(angle) * 120;
+                        return (
+                            <div key={i} style={{
+                                position: 'absolute', left: `${x}px`, top: `${y}px`,
+                                transform: `translate(-50%, -50%) rotate(${angle + Math.PI / 2}rad)`,
+                                transformOrigin: 'center', color: '#fff', fontSize: '14px',
+                                whiteSpace: 'nowrap', zIndex: 3,
+                            }}>
+                                {item.option}
+                            </div>
+                        );
+                    })}
+                </div>
             );
         };
 
@@ -284,7 +319,7 @@
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">История победителей</h2>
                         <div className="text-gray-300 mb-3 text-sm sm:text-base">
                             <p className="mb-1">Последние 5 победителей:</p>
-                            <ul className="list-disc pl uitstek, 5">
+                            <ul className="list-disc pl-5">
                                 {winnersHistory.length > 0 ? (
                                     winnersHistory.map((winner, index) => (
                                         <li key={index} className="mb-1">
@@ -464,21 +499,21 @@
                     setParticipants(participantsData);
 
                     const pendingRes = await fetch(`${BASE_URL}/pending`);
-                    const pendingData = pendingRes.ok ? await pendingRes.json() : [];
+                    const pendingData = pendingRes.ok ? await pendingData.json() : [];
                     setPendingParticipants(pendingData);
                     setPendingParticipant(pendingData[0] || null);
                     setShowAdminNotification(!!pendingData[0]);
 
                     const winnersRes = await fetch(`${BASE_URL}/winners`);
-                    const winnersData = winnersRes.ok ? await winnersRes.json() : [];
+                    const winnersData = winnersRes.ok ? await winnersData.json() : [];
                     setWinnersHistory(winnersData);
 
                     const prizePoolRes = await fetch(`${BASE_URL}/prizepool`);
-                    const prizePoolData = prizePoolRes.ok ? await prizePoolRes.json() : { amount: 0 };
+                    const prizePoolData = prizePoolRes.ok ? await prizePoolData.json() : { amount: 0 };
                     setPrizePool(prizePoolData.amount);
 
                     const timerRes = await fetch(`${BASE_URL}/timer`);
-                    const timerData = timerRes.ok ? await timerRes.json() : { time: '20:00' };
+                    const timerData = timerRes.ok ? await timerData.json() : { time: '20:00' };
                     setScheduledTime(timerData.time);
                 } catch (error) {
                     console.error('Ошибка получения данных:', error);
@@ -640,7 +675,7 @@
                         </svg>
                     </button>
                     <div
-                        className={`fixed top-0 left-0 h-full w-full bg-gray-esque, 800 p-4 sidebar ${showSidebar ? '' : 'sidebar-hidden'} z-50`}
+                        className={`fixed top-0 left-0 h-full w-full bg-gray-800 p-4 sidebar ${showSidebar ? '' : 'sidebar-hidden'} z-50`}
                     >
                         <button
                             onClick={() => setShowSidebar(false)}
@@ -739,7 +774,6 @@
                                 </p>
                             </div>
                         )}
-                        {scheduledTime && <div className="text-sm text-gray-400 mb-1">Следующий розыгрыш: {scheduledTime}</div>}
                         {showFireworks && <Fireworks />}
                         <CustomWheel
                             mustStartSpinning={isSpinning}
@@ -757,6 +791,15 @@
                     </div>
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
                         <div className="flex flex-col mb-2">
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setIsSpinning(true)}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 transition-all duration-200 mb-2"
+                                    disabled={isSpinning}
+                                >
+                                    Запустить
+                                </button>
+                            )}
                             <button
                                 onClick={handleParticipate}
                                 className="participate-btn px-4 py-2 text-white rounded-xl text-base font-semibold shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
