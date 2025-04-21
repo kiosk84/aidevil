@@ -80,6 +80,24 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
         }
+        /* Winner overlay animation */
+        @keyframes overlay-pop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .winner-overlay {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1100;
+            color: #00ffff;
+            text-align: center;
+        }
+        .winner-overlay h2, .winner-overlay p {
+            margin: 0.5em 0;
+            animation: overlay-pop 0.5s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -116,9 +134,14 @@
                     const offset = seg * idx + seg / 2;
                     const rotation = 360 * 5 + (360 - offset);
                     const wheel = wheelRef.current;
-                    wheel.style.transition = `transform ${spinTime}s ease-out`;
+                    // smooth deceleration easing
+                    wheel.style.transition = `transform ${spinTime}s cubic-bezier(0.33,1,0.68,1)`;
                     wheel.style.transform = `rotate(${rotation}deg)`;
-                    setTimeout(() => onStopSpinning(data[idx]), spinTime * 1000);
+                    const onEnd = () => {
+                        onStopSpinning(data[idx]);
+                        wheel.removeEventListener('transitionend', onEnd);
+                    };
+                    wheel.addEventListener('transitionend', onEnd);
                 }
             }, [mustStartSpinning, data, spinTime, onStopSpinning]);
             const seg = 360 / (data.length || 1);
@@ -131,19 +154,19 @@
             return (
                 <div style={{ position: 'relative', width: '300px', height: '300px' }}>
                     {/* Red marker triangle */}
+                    <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: '20px solid red', zIndex: 4 }} />
+                    {/* Line from marker to center */}
                     <div style={{
-                        position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
-                        width: 0, height: 0,
-                        borderLeft: '10px solid transparent', borderRight: '10px solid transparent',
-                        borderBottom: '20px solid red', zIndex: 4,
-                    }} />
-                    <div style={{
-                        position: 'absolute', left: '50%', top: '60%',
+                        position: 'absolute',
+                        top: '10px',
+                        left: '50%',
                         transform: 'translateX(-50%)',
-                        width: '80%', height: '20px',
-                        background: 'rgba(30, 64, 175, 0.5)',
-                        filter: 'blur(12px)',
-                        borderRadius: '50%', zIndex: 1,
+                        width: '2px',
+                        height: '140px',
+                        background: '#00ffff',
+                        boxShadow: '0 0 8px #00ffff',
+                        zIndex: 3,
+                        borderRadius: '1px'
                     }} />
                     <div
                         ref={wheelRef}
@@ -154,24 +177,29 @@
                             position: 'relative', zIndex: 2,
                             boxShadow: '0 0 40px 12px rgba(0, 255, 255, 0.8)',
                         }}
-                    />
-                    {/* Segment labels */}
-                    {data.length > 0 && data.map((item, i) => {
-                        const angle = (i * seg + seg / 2) * Math.PI / 180;
-                        const x = 150 + Math.cos(angle) * 120;
-                        const y = 150 + Math.sin(angle) * 120;
-                        return (
-                            <div key={i} style={{
-                                position: 'absolute', left: `${x}px`, top: `${y}px`,
-                                transform: 'translate(-50%, -50%)',
-                                writingMode: 'vertical-rl',
-                                transformOrigin: 'center', color: '#fff', fontSize: '14px',
-                                whiteSpace: 'nowrap', zIndex: 3,
-                            }}>
-                                {item.option}
-                            </div>
-                        );
-                    })}
+                    >
+                        {/* Segment labels inside rotating wheel */}
+                        {data.length > 0 && data.map((item, i) => {
+                            const angle = (i * seg + seg / 2) * Math.PI / 180;
+                            const x = 150 + Math.cos(angle) * 120;
+                            const y = 150 + Math.sin(angle) * 120;
+                            return (
+                                <div key={i} style={{
+                                    position: 'absolute', left: `${x}px`, top: `${y}px`,
+                                    transform: `translate(-50%, -50%) rotate(${angle + Math.PI / 2}rad)`,
+                                    transformOrigin: 'center',
+                                    color: '#fff',
+                                    fontSize: '14px',
+                                    fontFamily: 'Arial Black, sans-serif',
+                                    fontWeight: 'bold',
+                                    WebkitTextStroke: '1px #000',
+                                    whiteSpace: 'nowrap', zIndex: 3,
+                                }}>
+                                    {item.option}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             );
         };
@@ -345,25 +373,6 @@
             );
         };
 
-        const WinnerModal = ({ isOpen, winner, onClose }) => {
-            if (!isOpen || !winner) return null;
-            return (
-                <div className="fixed inset-0 flex items-center justify-center modal px-2" style={{ zIndex: 1000 }}>
-                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
-                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Победитель!</h2>
-                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Поздравляем: {winner.name}</p>
-                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Приз: {winner.prize} ₽</p>
-                        <button
-                            onClick={onClose}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base"
-                        >
-                            Закрыть
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
         const PaymentModal = ({ isOpen, onClose, name, setName, onConfirm }) => {
             if (!isOpen) return null;
             return (
@@ -490,10 +499,11 @@
             const [duplicateMessage, setDuplicateMessage] = useState('');
             const [countdown, setCountdown] = useState(null);
             const [showWinnerModal, setShowWinnerModal] = useState(false);
-            const [showReviewModal, setShowReviewModal] = useState(false); 
+            const [showReviewModal, setShowReviewModal] = useState(false);
             const [canvasSize, setCanvasSize] = useState(300);
             const prevPendingRef = useRef([]);
             const spinTriggeredRef = useRef(false);
+            const [showWinnerOverlay, setShowWinnerOverlay] = useState(false);
 
             const fetchData = async () => {
                 // Fetch participants
@@ -602,8 +612,6 @@
                         setWinner(data.winner);
                         setShowFireworks(true);
                         setTimeout(() => {
-                            setShowWinnerModal(true);
-                            setIsSpinning(false);
                             setShowFireworks(false);
                             spinTriggeredRef.current = false;
                             fetchData();
@@ -684,7 +692,7 @@
                         onClose={() => setShowDuplicateModal(false)}
                     />
                     <ReviewModal isOpen={showReviewModal} onClose={() => { setShowReviewModal(false); fetchData(); }} />
-                    <WinnerModal isOpen={showWinnerModal} winner={winner} onClose={() => setShowWinnerModal(false)} />
+                    {/* WinnerModal removed: winner displayed under wheel after spin */}
                     <button
                         onClick={() => setShowSidebar(true)}
                         className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
@@ -799,16 +807,29 @@
                         <CustomWheel
                             mustStartSpinning={isSpinning}
                             data={participants.length > 0 ? participants.map(p => ({ option: p })) : [{ option: 'Нет участников', color: '#444' }]}
-                            onStopSpinning={(winner) => {
+                            onStopSpinning={(win) => {
                                 setIsSpinning(false);
                                 spinTriggeredRef.current = false;
-                                if (winner && winner.option !== 'Нет участников') {
-                                    setWinner({ name: winner.option, prize: prizePool });
-                                    setShowWinnerModal(true);
+                                if (win && win.option !== 'Нет участников') {
+                                    setWinner({ name: win.option, prize: prizePool });
+                                    setShowWinnerOverlay(true);
+                                    // hide overlay and reset after 5 seconds
+                                    setTimeout(() => {
+                                        setShowWinnerOverlay(false);
+                                        setWinner(null);
+                                        fetchData();
+                                    }, 5000);
                                 }
                             }}
                             spinTime={7}
                         />
+                        {/* Winner overlay */}
+                        {showWinnerOverlay && winner && (
+                            <div className="winner-overlay">
+                                <h2 className="text-3xl font-bold">Победитель!</h2>
+                                <p className="text-2xl">{winner.name}</p>
+                            </div>
+                        )}
                     </div>
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
                         <div className="flex flex-col mb-2">
