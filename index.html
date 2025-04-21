@@ -489,16 +489,12 @@
             const [showDuplicateModal, setShowDuplicateModal] = useState(false);
             const [duplicateMessage, setDuplicateMessage] = useState('');
             const [canvasSize, setCanvasSize] = useState(400);
-            const [timerEnabled, setTimerEnabled] = useState(true);
             const [rotation, setRotation] = useState(0);
             const [spinTriggered, setSpinTriggered] = useState(false);
             const [noParticipantsMessage, setNoParticipantsMessage] = useState('');
             const [winnerVisible, setWinnerVisible] = useState(true);
-            const wheelRef = useRef(null);
-            const rotationRef = useRef(0);
             const winnerTimeoutRef = useRef(null);
             const prevPendingRef = useRef([]);
-            const deadlineRef = useRef(null);
             const [countdown, setCountdown] = useState(null);
             const [showWinnerAnimation, setShowWinnerAnimation] = useState(false);
 
@@ -579,26 +575,21 @@
             }, []);
 
             useEffect(() => {
-                if (!timerEnabled) return;
-                deadlineRef.current = Date.now() + 5 * 60 * 1000;
                 const tick = () => {
-                    const diff = deadlineRef.current - Date.now();
-                    if (diff <= 0) {
-                        setCountdown('00:00:00');
-                        setSpinTriggered(true);
-                        deadlineRef.current = Date.now() + 5 * 60 * 1000;
-                    } else {
-                        setSpinTriggered(false);
-                        const h = Math.floor(diff / 3600000);
-                        const m = Math.floor((diff % 3600000) / 60000);
-                        const s = Math.floor((diff % 60000) / 1000);
-                        setCountdown(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`);
-                    }
+                    const now = new Date();
+                    const next = new Date(now);
+                    next.setMinutes(0, 0, 0, 0);
+                    next.setHours(now.getHours() + 1);
+                    const diff = next - now;
+                    const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
+                    const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+                    const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+                    setCountdown(`${hh}:${mm}:${ss}`);
                 };
                 tick();
                 const id = setInterval(tick, 1000);
                 return () => clearInterval(id);
-            }, [timerEnabled]);
+            }, []);
 
             const handlePaymentConfirm = async (participantName) => {
                 const nameTrim = participantName.trim();
@@ -723,24 +714,6 @@
                 return () => clearInterval(testTimer);
             }, []);
 
-            // Эффект для расчёта отсчёта до начала следующего часа
-            useEffect(() => {
-                function updateCountdown() {
-                    const now = new Date();
-                    const next = new Date(now);
-                    next.setMinutes(0, 0, 0, 0);
-                    next.setHours(now.getHours() + 1);
-                    const diff = next - now;
-                    const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
-                    const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-                    const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-                    setCountdown(`${hh}:${mm}:${ss}`);
-                }
-                updateCountdown();
-                const id = setInterval(updateCountdown, 1000);
-                return () => clearInterval(id);
-            }, []);
-
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
                     <DuplicateModal
@@ -822,11 +795,6 @@
                         />
                     )}
                     <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
-                        {countdown && (
-                            <div className="mb-4 text-yellow-300 font-semibold">
-                                Запуск через {countdown}
-                            </div>
-                        )}
                         <div style={{position:'relative', display:'inline-block', width:'100%'}}>
                             <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
                             <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center" style={{position:'relative', zIndex:4}}>Колесо Фортуны</h1>
@@ -843,7 +811,7 @@
                         )}
                         <p className="mb-3 text-lg sm:text-xl text-white text-center">Призовой фонд: <span style={{color:'#22c55e', fontSize:'1.4em', fontWeight:'bold'}}>{prizePool} ₽</span></p>
                         
-                        {countdown && timerEnabled && (
+                        {countdown && (
                             <div className="text-center mb-3">
                                 <h2 className="text-lg sm:text-xl font-bold mb-1" style={{ WebkitTextStroke: '0.5px #1E40AF', color: '#FFD700' }}>Следующий розыгрыш</h2>
                                 <p className="text-base sm:text-lg text-gray-300 digital-timer">
