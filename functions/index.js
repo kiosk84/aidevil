@@ -5,6 +5,14 @@ const express = require('express');
 const cors = require('cors');
 const logger = require('./logger');
 const bodyParser = require('body-parser');
+const CHANNEL_URL = 'https://t.me/channel_fortune';
+const WELCOME_MESSAGE = `👋 Добро пожаловать в игру «Колесо Фортуны»!
+✨ Ты на шаг ближе к тому, чтобы испытать удачу и сорвать куш! 🔥
+
+🎁 Каждый день в 20:00 мы разыгрываем призовой фонд среди участников игры.
+✅ Всё честно, прозрачно и в реальном времени!
+
+⏰ Следующий розыгрыш уже скоро — не упусти шанс стать победителем! 🍀`;
 // Route handlers
 const participantsRoute = require('./routes/participants');
 const pendingRoute = require('./routes/pending');
@@ -51,50 +59,66 @@ db.serialize(() => {
   });
 });
 
-// Обработчик команды /start
-bot.start((ctx) => {
-  ctx.reply('👋 Добро пожаловать в бот розыгрыша! Чтобы присоединиться, используйте /join или нажмите кнопку в меню.', {
-    reply_markup: {
-      keyboard: [[{ text: '/join' }], [{ text: '/spin' }], [{ text: '/winners' }]],
-      resize_keyboard: true,
-      one_time_keyboard: false
+// Обработка команды /start
+bot.start(async (ctx) => {
+  try {
+    const telegramId = ctx.from.id.toString();
+    const isAdmin = telegramId === ADMIN_ID;
+    logger.info(`Received /start from user: ${telegramId}, isAdmin: ${isAdmin}`);
+
+    if (isAdmin) {
+      await ctx.reply('Добро пожаловать, админ! 👑', {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${telegramId}` } }],
+            [{ text: '👥 Список участников', callback_data: 'getParticipants' }, { text: '🏆 Победители', callback_data: 'getWinners' }],
+            [{ text: '💰 Призовой фонд', callback_data: 'getPrizePool' }, { text: '🔄 Сброс', callback_data: 'reset' }],
+            [{ text: '⏰ Установить таймер', callback_data: 'timerPrompt' }, { text: '🗑 Удалить участника', callback_data: 'deletePrompt' }]
+          ]
+        }
+      });
+    } else {
+      await ctx.reply(WELCOME_MESSAGE, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${telegramId}` } }],
+            [{ text: '🔵 Официальный канал', url: CHANNEL_URL }]
+          ]
+        }
+      });
     }
-  });
+  } catch (err) {
+    logger.error('Error in /start:', err);
+    await ctx.reply('Произошла ошибка. Попробуйте позже.');
+  }
 });
 
-// Обработка команды /start (только для админа)
-bot.command('start', (ctx) => {
-  if (ctx.from.id.toString() === ADMIN_ID) {
-    ctx.reply('Добро пожаловать, админ!', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }],
-          [{ text: 'Список участников', callback_data: 'getParticipants' }, { text: 'История победителей', callback_data: 'getWinners' }],
-          [{ text: 'Призовой фонд', callback_data: 'getPrizePool' }, { text: 'Сброс', callback_data: 'reset' }],
-          [{ text: 'Установить таймер', callback_data: 'timerPrompt' }, { text: 'Удалить участника', callback_data: 'deletePrompt' }]
-        ]
-      }
+// Обработка inline-кнопки 'Участвовать'
+bot.action('join', async (ctx) => {
+  await ctx.answerCbQuery();
+  const telegramId = ctx.from.id.toString();
+  const name = ctx.from.first_name || 'Участник';
+  // Вставляем заявку через тот же join
+  db.get('SELECT 1 FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
+    if (err) return ctx.reply('Ошибка при проверке заявки.');
+    if (row) return ctx.reply('Вы уже подали заявку. Дождитесь подтверждения.');
+    db.get('SELECT 1 FROM participants WHERE telegramId = ?', [telegramId], (err2, row2) => {
+      if (err2) return ctx.reply('Ошибка при проверке участия.');
+      if (row2) return ctx.reply('Вы уже участник розыгрыша.');
+      db.run('INSERT INTO pending (name, telegramId) VALUES (?, ?)', [name, telegramId], (err3) => {
+        if (err3) return ctx.reply('Ошибка при подаче заявки.');
+        bot.telegram.sendMessage(ADMIN_ID,
+          `Новая заявка на участие:
+Имя: ${name}
+Telegram ID: ${telegramId}`,
+          { reply_markup: { inline_keyboard: [
+            [{ text: '✅ Подтвердить', callback_data: `approve_${name}` },{ text: '❌ Отклонить', callback_data: `reject_${name}` }]
+          ] }}
+        );
+        ctx.reply('Ваша заявка отправлена. Дождитесь подтверждения администратора.');
+      });
     });
-  } else {
-    ctx.reply(`👋 Добро пожаловать в игру «Колесо Фортуны»!
-✨ Ты на шаг ближе к тому, чтобы испытать удачу и сорвать куш! 🔥
-
-🎁 Каждый день в 20:00 мы разыгрываем призовой фонд среди участников игры.
-✅ Всё честно, прозрачно и в реальном времени!
-
-⏰ Следующий розыгрыш уже скоро — не упусти шанс стать победителем! 🍀`, {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '➡️ Открыть приложение ', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }
-          ],
-          [
-            { text: '🔵 Официальный канал', url: 'https://t.me/channel_fortune' }
-          ]
-        ]
-      }
-    });
-  }
+  });
 });
 
 // Команда /help (только для админа)
@@ -104,6 +128,33 @@ bot.command('help', (ctx) => {
     return;
   }
   ctx.reply('Доступные команды:\n/start - Начать работу с ботом\n/help - Показать список команд\n/participants - Список участников\n/winners - История победителей\n/prizepool - Текущий призовой фонд\n/approve <имя> - Подтвердить участника\n/reject <имя> - Отклонить участника');
+});
+
+// Команда /join - подать заявку на участие
+bot.command('join', (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const name = ctx.from.first_name || 'Участник';
+  // Проверка на дублирование
+  db.get('SELECT 1 FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
+    if (err) { ctx.reply('Ошибка при проверке заявки.'); return; }
+    if (row) { ctx.reply('Вы уже подали заявку. Дождитесь подтверждения.'); return; }
+    db.get('SELECT 1 FROM participants WHERE telegramId = ?', [telegramId], (err2, row2) => {
+      if (err2) { ctx.reply('Ошибка при проверке участия.'); return; }
+      if (row2) { ctx.reply('Вы уже участник розыгрыша.'); return; }
+      // Вставка в pending
+      db.run('INSERT INTO pending (name, telegramId) VALUES (?, ?)', [name, telegramId], (err3) => {
+        if (err3) { ctx.reply('Ошибка при подаче заявки.'); return; }
+        // Уведомление админа
+        bot.telegram.sendMessage(ADMIN_ID,
+          `Новая заявка на участие:\nИмя: ${name}\nTelegram ID: ${telegramId}`,
+          { reply_markup: { inline_keyboard: [
+            [{ text: '✅ Подтвердить', callback_data: `approve_${name}` },{ text: '❌ Отклонить', callback_data: `reject_${name}` }]
+          ] }}
+        );
+        ctx.reply('Ваша заявка отправлена. Дождитесь подтверждения администратора.');
+      });
+    });
+  });
 });
 
 // Команда /participants (только для админа)
@@ -413,8 +464,13 @@ bot.command('settimer', (ctx) => {
         return bot.telegram.sendMessage(chatId, 'Нет участников для спина.');
       }
       const winner = rows[Math.floor(Math.random() * rows.length)];
-      const prize = Math.floor(Math.random() * 1000);
-      db.run('INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)', [winner.name, winner.telegramId, prize, Date.now()]);
+      const prize = Math.floor(Math.random() * 1000) + 100;
+      const timestamp = Date.now();
+      db.run(
+        'INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)',
+        [winner.name, winner.telegramId, prize, timestamp],
+        (err) => { if (err) logger.error('Ошибка вставки победителя:', err); }
+      );
       bot.telegram.sendMessage(chatId, `Победитель: ${winner.name}, приз: ${prize}₽`);
     });
   }, diff);
@@ -464,7 +520,8 @@ if (process.env.HOST_URL) {
     (req, res) => {
       let update;
       try {
-        update = JSON.parse(req.body);
+        const rawBody = req.body.toString('utf8');
+        update = JSON.parse(rawBody);
       } catch (err) {
         logger.error('Webhook parse error:', err);
         return res.status(400).send('Invalid JSON');
