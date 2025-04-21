@@ -103,10 +103,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const telegramId = tg?.initDataUnsafe?.user?.id || urlParams.get('telegramId');
         const ADMIN_ID = '123456789'; // замените на свой
+        // Проверка админа
         const isAdmin = telegramId?.toString() === ADMIN_ID;
-
-        // Backend API base URL (порт вашего бэкенда)
-        const BASE_URL = 'http://localhost:3000';
+        // API base for local dev (frontend on 8080, backend on 3000)
+        const BASE_URL = window.location.port === '8080'
+            ? `${window.location.protocol}//${window.location.hostname}:3000`
+            : '';
 
         const { useState, useEffect, useRef } = React;
 
@@ -496,7 +498,7 @@
                     setPrizePool(prizePoolData.amount);
 
                     const timerRes = await fetch(`${BASE_URL}/timer`);
-                    const timerData = timerRes.ok ? await timerRes.json() : { time: '00:00' };
+                    const timerData = timerRes.ok ? await timerData.json() : { time: '00:00' };
                     setScheduledTime(timerData.time);
 
                     // Проверяем, что все данные загружены, прежде чем запускать салют
@@ -589,20 +591,22 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: nameTrim, telegramId })
                     });
+                    console.log('POST /pending status:', response.status, 'result:', await response.json());
                     const result = await response.json();
-                    if (result.success) {
-                        if (result.admin) {
-                            setParticipants([...participants, nameTrim]);
-                        } else {
-                            setPendingParticipants([...pendingParticipants, nameTrim]);
-                            setShowAdminNotification(true);
-                        }
-                        setName('');
-                        setShowPaymentModal(false);
-                    } else {
-                        setDuplicateMessage(result.error);
+                    if (!response.ok) {
+                        setDuplicateMessage(result.error || `Ошибка: ${response.status}`);
                         setShowDuplicateModal(true);
+                        return;
                     }
+                    // success
+                    if (result.admin) {
+                        setParticipants([...participants, nameTrim]);
+                    } else {
+                        setPendingParticipants([...pendingParticipants, nameTrim]);
+                        setShowAdminNotification(true);
+                    }
+                    setName('');
+                    setShowPaymentModal(false);
                 } catch (error) {
                     console.error('Ошибка добавления участника:', error);
                     setDuplicateMessage('Ошибка при добавлении заявки.');
@@ -627,20 +631,26 @@
 
             // Обработчик кнопки "Участвовать" (открывает окно оплаты)
             const handleParticipate = async () => {
-                // Если telegramId ещё не задан (пользователь не авторизован), открываем ввод имени
+                // Если telegramId ещё не задан, открываем ввод имени
                 if (!telegramId) {
                     setShowPaymentModal(true);
                     return;
                 }
                 try {
-                    const res = await fetch(`${BASE_URL}/pending/check?telegramId=${telegramId}`);
+                    const res = await fetch(`${BASE_URL}/pending/check?telegramId=${encodeURIComponent(telegramId)}`);
+                    if (res.status === 400) {
+                        // telegramId missing or invalid, treat as new
+                        setShowPaymentModal(true);
+                        return;
+                    }
                     const result = await res.json();
                     if (!res.ok) {
                         setDuplicateMessage(result.error);
                         setShowDuplicateModal(true);
-                    } else {
-                        setShowPaymentModal(true);
+                        return;
                     }
+                    // allowed to participate
+                    setShowPaymentModal(true);
                 } catch (error) {
                     console.error('Ошибка проверки участия:', error);
                     setDuplicateMessage('Ошибка при проверке участия');
