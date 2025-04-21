@@ -93,6 +93,17 @@
                 box-shadow: 0 2px 10px 0 rgba(59, 130, 246, 0.18), 0 1px 3px 0 rgba(30, 64, 175, 0.09);
             }
         }
+        .animate-bounce {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -115,7 +126,7 @@
         const DuplicateModal = ({ isOpen, message, onClose }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                <div className="fixed inset-0 flex items-center justify-center modal z-70 px-2">
                     <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Уведомление</h2>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">{message}</p>
@@ -398,7 +409,7 @@
             if (!isOpen || !pendingParticipant) return null;
 
             return (
-                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                <div className="fixed inset-0 flex items-center justify-center modal z-70 px-2">
                     <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full">
                         <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Новый участник</h2>
                         <p className="text-gray-300 mb-3 text-sm sm:text-base">Участник: {pendingParticipant}</p>
@@ -446,6 +457,18 @@
             );
         };
 
+        const WinnerAnimationOverlay = ({ winner }) => {
+            if (!winner) return null;
+            return (
+                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-70">
+                    <Fireworks />
+                    <div className="text-4xl sm:text-5xl font-bold text-yellow-300 animate-bounce">
+                        {winner}
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
@@ -477,6 +500,7 @@
             const prevPendingRef = useRef([]);
             const deadlineRef = useRef(null);
             const [countdown, setCountdown] = useState(null);
+            const [showWinnerAnimation, setShowWinnerAnimation] = useState(false);
 
             const fetchData = async () => {
                 try {
@@ -485,17 +509,17 @@
                     setParticipants(participantsData);
 
                     const pendingRes = await fetch(`${BASE_URL}/pending`);
-                    const pendingData = pendingRes.ok ? await pendingRes.json() : [];
+                    const pendingData = pendingRes.ok ? await pendingData.json() : [];
                     setPendingParticipants(pendingData);
                     setPendingParticipant(pendingData[0] || null);
                     setShowAdminNotification(!!pendingData[0]);
 
                     const winnersRes = await fetch(`${BASE_URL}/winners`);
-                    const winnersData = winnersRes.ok ? await winnersRes.json() : [];
+                    const winnersData = winnersRes.ok ? await winnersData.json() : [];
                     setWinnersHistory(winnersData); // Обновляем историю победителей
 
                     const prizePoolRes = await fetch(`${BASE_URL}/prizepool`);
-                    const prizePoolData = prizePoolRes.ok ? await prizePoolRes.json() : { amount: 0 };
+                    const prizePoolData = prizePoolRes.ok ? await prizePoolData.json() : { amount: 0 };
                     setPrizePool(prizePoolData.amount);
 
                     const timerRes = await fetch(`${BASE_URL}/timer`);
@@ -514,6 +538,12 @@
                         const newWinner = winnersData[0];
                         setWinner(newWinner.name);
                         setShowFireworks(true);
+                        setShowWinnerAnimation(true);
+                        clearTimeout(winnerTimeoutRef.current);
+                        winnerTimeoutRef.current = setTimeout(() => {
+                            setShowWinnerAnimation(false);
+                            setWinner(null);
+                        }, 30000);
                         setTimeout(() => setShowFireworks(false), 1500);
                         setTimeout(() => {
                             setWinner(null);
@@ -665,6 +695,12 @@
                             setSpinning(false);
                             setSpinTriggered(false);
                             setShowFireworks(true);
+                            setShowWinnerAnimation(true);
+                            clearTimeout(winnerTimeoutRef.current);
+                            winnerTimeoutRef.current = setTimeout(() => {
+                                setShowWinnerAnimation(false);
+                                setWinner(null);
+                            }, 30000);
                             setTimeout(() => setShowFireworks(false), 1500);
                         }, 3000);
                     }
@@ -687,6 +723,24 @@
                 return () => clearInterval(testTimer);
             }, []);
 
+            // Эффект для расчёта отсчёта до начала следующего часа
+            useEffect(() => {
+                function updateCountdown() {
+                    const now = new Date();
+                    const next = new Date(now);
+                    next.setMinutes(0, 0, 0, 0);
+                    next.setHours(now.getHours() + 1);
+                    const diff = next - now;
+                    const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
+                    const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+                    const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+                    setCountdown(`${hh}:${mm}:${ss}`);
+                }
+                updateCountdown();
+                const id = setInterval(updateCountdown, 1000);
+                return () => clearInterval(id);
+            }, []);
+
             return (
                 <div className="min-h-screen flex flex-col p-2 bg-gray-900 relative">
                     <DuplicateModal
@@ -694,6 +748,7 @@
                         message={duplicateMessage}
                         onClose={() => setShowDuplicateModal(false)}
                     />
+                    <WinnerAnimationOverlay winner={showWinnerAnimation ? winner : null} />
                     <button
                         onClick={() => setShowSidebar(true)}
                         className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
@@ -767,6 +822,11 @@
                         />
                     )}
                     <div className="flex-1 flex flex-col items-center justify-start max-w-[100vw] mx-auto">
+                        {countdown && (
+                            <div className="mb-4 text-yellow-300 font-semibold">
+                                Запуск через {countdown}
+                            </div>
+                        )}
                         <div style={{position:'relative', display:'inline-block', width:'100%'}}>
                             <div style={{position:'absolute', left:'50%', bottom:'100%', transform:'translateX(-50%) translateY(-25%)', width:'90%', height:'38px', background:'rgba(255,224,102,0.85)', filter:'blur(18px)', borderRadius:'30px', zIndex:3, pointerEvents:'none'}}></div>
                             <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-white text-center" style={{position:'relative', zIndex:4}}>Колесо Фортуны</h1>

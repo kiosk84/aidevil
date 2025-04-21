@@ -51,6 +51,17 @@ db.serialize(() => {
   });
 });
 
+// Обработчик команды /start
+bot.start((ctx) => {
+  ctx.reply('👋 Добро пожаловать в бот розыгрыша! Чтобы присоединиться, используйте /join или нажмите кнопку в меню.', {
+    reply_markup: {
+      keyboard: [[{ text: '/join' }], [{ text: '/spin' }], [{ text: '/winners' }]],
+      resize_keyboard: true,
+      one_time_keyboard: false
+    }
+  });
+});
+
 // Обработка команды /start (только для админа)
 bot.command('start', (ctx) => {
   if (ctx.from.id.toString() === ADMIN_ID) {
@@ -379,6 +390,7 @@ bot.action('timerPrompt', async (ctx) => {
 });
 
 // Команда установки таймера автоспина (только для админа)
+let scheduledSpin;
 bot.command('settimer', (ctx) => {
   if (ctx.from.id.toString() !== ADMIN_ID) return;
   const parts = ctx.message.text.split(' ');
@@ -407,6 +419,30 @@ bot.command('settimer', (ctx) => {
     });
   }, diff);
 });
+
+// Функция для часового автоспина
+function scheduleHourlySpin() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setMinutes(0, 0, 0, 0);
+  next.setHours(now.getHours() + 1);
+  const diff = next - now;
+  scheduledSpin = setTimeout(async () => {
+    const chatId = ADMIN_ID; // отправляем в админ-чат
+    bot.telegram.sendMessage(chatId, '🎡 Часовой автоспин: вращаем колесо...');
+    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
+      if (err || !rows.length) {
+        return bot.telegram.sendMessage(chatId, 'Нет участников для спина.');
+      }
+      const winner = rows[Math.floor(Math.random() * rows.length)];
+      const prize = Math.floor(Math.random() * 1000);
+      db.run('INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)', [winner.name, winner.telegramId, prize, Date.now()]);
+      bot.telegram.sendMessage(chatId, `Победитель: ${winner.name}, приз: ${prize}₽`);
+    });
+    scheduleHourlySpin();
+  }, diff);
+  logger.info(`Часовой автоспин запланирован на ${next.toLocaleString()}`);
+}
 
 // Express API
 const app = express();
@@ -491,6 +527,8 @@ if (HOST_URL) {
     .catch(err => logger.error('Bot launch error:', err));
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
+  // Запускаем часовой автоспин
+  scheduleHourlySpin();
 }
 
 // Закрытие базы
