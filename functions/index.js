@@ -13,6 +13,7 @@ const WELCOME_MESSAGE = `👋 Добро пожаловать в игру «Ко
 ✅ Всё честно, прозрачно и в реальном времени!
 
 ⏰ Следующий розыгрыш уже скоро — не упусти шанс стать победителем! 🍀`;
+const runLottery = require('./services/lottery');
 // Route handlers
 const participantsRoute = require('./routes/participants');
 const pendingRoute = require('./routes/pending');
@@ -299,32 +300,41 @@ bot.command('reject', (ctx) => {
   });
 });
 
-// Обработка inline-кнопок подтверждения/отклонения участника
-bot.action(/approve_(.+)/, (ctx) => {
+// Inline button: approve pending participant
+bot.action(/^approve_(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
   const name = ctx.match[1];
-  if (ctx.from.id.toString() !== ADMIN_ID) return ctx.answerCbQuery('Доступ запрещён');
   db.get('SELECT telegramId FROM pending WHERE name = ?', [name], (err, row) => {
-    if (err) return ctx.answerCbQuery('Ошибка БД');
-    if (!row) return ctx.answerCbQuery('Участник не найден');
-    db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, row.telegramId], (err) => {
-      if (err) return ctx.answerCbQuery('Ошибка добавления');
-      db.run('DELETE FROM pending WHERE name = ?', [name]);
-      db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1');
-      ctx.editMessageReplyMarkup(); // убираем кнопки
-      ctx.reply(`Участник ${name} подтверждён!`);
-      ctx.answerCbQuery();
+    if (err || !row) {
+      logger.error('Approve error fetching pending:', err);
+      return;
+    }
+    const telegramId = row.telegramId;
+    db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, telegramId], (err2) => {
+      if (err2) logger.error('Error inserting participant:', err2);
     });
+    db.run('DELETE FROM pending WHERE name = ?', [name]);
+    db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1');
+    bot.telegram.sendMessage(telegramId, '🎉 Ваша заявка подтверждена! Добро пожаловать в игру.');
+    ctx.editMessageReplyMarkup({ inline_keyboard: [] });
   });
 });
 
-bot.action(/reject_(.+)/, (ctx) => {
+// Inline button: reject pending participant
+bot.action(/^reject_(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
   const name = ctx.match[1];
-  if (ctx.from.id.toString() !== ADMIN_ID) return ctx.answerCbQuery('Доступ запрещён');
-  db.run('DELETE FROM pending WHERE name = ?', [name], (err) => {
-    if (err) return ctx.answerCbQuery('Ошибка отклонения');
-    ctx.editMessageReplyMarkup();
-    ctx.reply(`Участник ${name} отклонён.`);
-    ctx.answerCbQuery();
+  db.get('SELECT telegramId FROM pending WHERE name = ?', [name], (err, row) => {
+    if (err || !row) {
+      logger.error('Reject error fetching pending:', err);
+      return;
+    }
+    const telegramId = row.telegramId;
+    db.run('DELETE FROM pending WHERE name = ?', [name], (err2) => {
+      if (err2) logger.error('Error deleting pending on reject:', err2);
+    });
+    bot.telegram.sendMessage(telegramId, '😔 Ваша заявка отклонена. Вы можете попробовать снова.');
+    ctx.editMessageReplyMarkup({ inline_keyboard: [] });
   });
 });
 
@@ -456,23 +466,10 @@ bot.command('settimer', (ctx) => {
   if (target <= now) target.setDate(target.getDate()+1);
   const diff = target - now;
   ctx.reply(`Таймер установлен на ${parts[1]}. Спин: ${target.toLocaleString()}`);
-  scheduledSpin = setTimeout(() => {
+  scheduledSpin = setTimeout(async () => {
     const chatId = ctx.chat.id;
-    bot.telegram.sendMessage(chatId, '🎡 Автоспин: вращаем колесо...');
-    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
-      if (err || !rows.length) {
-        return bot.telegram.sendMessage(chatId, 'Нет участников для спина.');
-      }
-      const winner = rows[Math.floor(Math.random() * rows.length)];
-      const prize = Math.floor(Math.random() * 1000) + 100;
-      const timestamp = Date.now();
-      db.run(
-        'INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)',
-        [winner.name, winner.telegramId, prize, timestamp],
-        (err) => { if (err) logger.error('Ошибка вставки победителя:', err); }
-      );
-      bot.telegram.sendMessage(chatId, `Победитель: ${winner.name}, приз: ${prize}₽`);
-    });
+    await bot.telegram.sendMessage(chatId, '🎡 Автоспин: вращаем колесо...');
+    await runLottery();
   }, diff);
 });
 
@@ -484,17 +481,9 @@ function scheduleHourlySpin() {
   next.setHours(now.getHours() + 1);
   const diff = next - now;
   scheduledSpin = setTimeout(async () => {
-    const chatId = ADMIN_ID; // отправляем в админ-чат
-    bot.telegram.sendMessage(chatId, '🎡 Часовой автоспин: вращаем колесо...');
-    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
-      if (err || !rows.length) {
-        return bot.telegram.sendMessage(chatId, 'Нет участников для спина.');
-      }
-      const winner = rows[Math.floor(Math.random() * rows.length)];
-      const prize = Math.floor(Math.random() * 1000);
-      db.run('INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)', [winner.name, winner.telegramId, prize, Date.now()]);
-      bot.telegram.sendMessage(chatId, `Победитель: ${winner.name}, приз: ${prize}₽`);
-    });
+    const chatId = ADMIN_ID;
+    await bot.telegram.sendMessage(chatId, '🎡 Часовой автоспин: вращаем колесо...');
+    await runLottery();
     scheduleHourlySpin();
   }, diff);
   logger.info(`Часовой автоспин запланирован на ${next.toLocaleString()}`);

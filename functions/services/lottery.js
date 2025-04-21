@@ -18,12 +18,8 @@ function runLottery() {
         (err) => {
           if (err) return reject(err);
 
-          participants.forEach((p) => {
-            const msg = p.telegramId === winner.telegramId
-              ? `🎉 Поздравляем, ${p.name}! Вы выиграли ${prizePool} ₽!` 
-              : `Розыгрыш завершён! Победитель: ${winner.name}. Приз: ${prizePool} ₽.`;
-            bot.telegram.sendMessage(p.telegramId, msg);
-          });
+          // Notify only the winner
+          bot.telegram.sendMessage(winner.telegramId, `🎉 Поздравляем, ${winner.name}! Вы выиграли ${prizePool} ₽!`);
 
           bot.telegram.sendMessage(
             ADMIN_ID,

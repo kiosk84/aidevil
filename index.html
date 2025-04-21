@@ -122,6 +122,7 @@
             : '';
 
         const { useState, useEffect, useRef } = React;
+        import { Wheel } from 'react-custom-roulette';
 
         const DuplicateModal = ({ isOpen, message, onClose }) => {
             if (!isOpen) return null;
@@ -139,68 +140,6 @@
                     </div>
                 </div>
             );
-        };
-
-        const Wheel = ({ participants, winner, spinning, rotation, canvasSize }) => {
-            const canvasRef = useRef(null);
-            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeead', '#d4a5a5'];
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const radius = canvas.width / 2 - 10;
-                const arc = 2 * Math.PI / (participants.length || 1);
-                const fontSize = canvasSize < 300 ? 18 : canvasSize < 400 ? 22 : 28;
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate((rotation * Math.PI) / 180);
-                ctx.translate(-centerX, -centerY);
-
-                participants.forEach((participant, i) => {
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, i * arc, (i + 1) * arc);
-                    ctx.lineTo(centerX, centerY);
-                    ctx.fillStyle = colors[i % colors.length];
-                    ctx.fill();
-                    ctx.save();
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(i * arc + arc / 2);
-                    ctx.font = `bold ${fontSize}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#fff';
-                    ctx.shadowColor = '#222';
-                    ctx.shadowBlur = 4;
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 8;
-                    ctx.fillText(participant || 'Пусто', radius / 2, 0);
-                    ctx.shadowBlur = 0;
-                    ctx.strokeText(participant || 'Пусто', radius / 2, 0);
-                    ctx.restore();
-                });
-
-                ctx.restore();
-
-                ctx.beginPath();
-                ctx.moveTo(canvas.width - 12, centerY - 6);
-                ctx.lineTo(canvas.width, centerY);
-                ctx.lineTo(canvas.width - 12, centerY + 6);
-                ctx.fillStyle = '#ffd700';
-                ctx.fill();
-            }, [participants, spinning, rotation, canvasSize]);
-
-            return <div style={{display:'flex',justifyContent:'center'}}>
-                <div style={{boxShadow:'0 0 60px 10px #3cf,0 0 100px 30px #39f',borderRadius:'50%',background:'rgba(0,0,30,0.15)',padding:'18px'}}>
-                    <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto"></canvas>
-                </div>
-            </div>;
         };
 
         const Fireworks = () => {
@@ -469,6 +408,19 @@
             );
         };
 
+        const ReviewModal = ({ isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 flex items-center justify-center modal z-50 px-2">
+                    <div className="bg-gray-800 p-4 rounded-lg max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
+                        <h2 className="text-lg sm:text-xl font-bold mb-3 text-white">Заявка отправлена</h2>
+                        <p className="text-gray-300 mb-3 text-sm sm:text-base">Ваша заявка на проверке. Пожалуйста, дождитесь подтверждения администратора.</p>
+                        <button onClick={() => { onClose(); fetchData(); }} className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base">Закрыть</button>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             const [participants, setParticipants] = useState([]);
             const [pendingParticipants, setPendingParticipants] = useState([]);
@@ -497,6 +449,13 @@
             const prevPendingRef = useRef([]);
             const [countdown, setCountdown] = useState(null);
             const [showWinnerAnimation, setShowWinnerAnimation] = useState(false);
+            const [showReviewModal, setShowReviewModal] = useState(false);
+            const [timerTime, setTimerTime] = useState(null);
+            const [autoTickId, setAutoTickId] = useState(null);
+            const [isSpinning, setIsSpinning] = useState(false);
+            const [spinDuration, setSpinDuration] = useState(0);
+            const [showWinnerModal, setShowWinnerModal] = useState(false);
+            const [winnerResult, setWinnerResult] = useState(null);
 
             const fetchData = async () => {
                 try {
@@ -575,53 +534,56 @@
             }, []);
 
             useEffect(() => {
+                if (!timerTime) return;
                 const tick = () => {
                     const now = new Date();
-                    const next = new Date(now);
-                    next.setMinutes(0, 0, 0, 0);
-                    next.setHours(now.getHours() + 1);
+                    const [hour, minute] = timerTime.split(':').map(Number);
+                    let next = new Date(now);
+                    next.setHours(hour, minute, 0, 0);
+                    if (next <= now) next.setDate(next.getDate() + 1);
                     const diff = next - now;
                     const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
                     const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
                     const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
                     setCountdown(`${hh}:${mm}:${ss}`);
+                    if (diff <= 0) {
+                        clearInterval(autoTickId);
+                        handleAutoSpin();
+                    }
                 };
                 tick();
                 const id = setInterval(tick, 1000);
+                setAutoTickId(id);
                 return () => clearInterval(id);
+            }, [timerTime]);
+
+            // fetch server timer
+            useEffect(() => {
+                fetch(`${BASE_URL}/timer`)
+                    .then(res => res.json())
+                    .then(data => setTimerTime(data.time))
+                    .catch(console.error);
             }, []);
 
-            const handlePaymentConfirm = async (participantName) => {
-                const nameTrim = participantName.trim();
-                if (!nameTrim) return;
-                try {
-                    const response = await fetch(`${BASE_URL}/pending`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: nameTrim, telegramId })
-                    });
-                    const result = await response.json();
-                    console.log('POST /pending status:', response.status, 'result:', result);
-                    if (!response.ok) {
-                        setDuplicateMessage(result.error || `Ошибка: ${response.status}`);
-                        setShowDuplicateModal(true);
-                        return;
+            // Auto spin handler
+            const handleAutoSpin = async () => {
+                // задаём длительность 7-10 секунд
+                const duration = Math.floor(Math.random() * 4 + 7) * 1000;
+                setSpinDuration(duration / 1000);
+                setIsSpinning(true);
+                const res = await fetch(`${BASE_URL}/spin`, { method: 'POST' });
+                const data = await res.json();
+                const win = data.success ? data.winner : null;
+                // через duration вывести результат
+                setTimeout(() => {
+                    setIsSpinning(false);
+                    if (win) {
+                        setWinnerResult(win);
+                        setShowWinnerModal(true);
+                        // после закрытия модалки обновить список
+                        fetchData();
                     }
-                    // success
-                    if (result.admin) {
-                        setParticipants([...participants, nameTrim]);
-                    } else {
-                        setPendingParticipants([...pendingParticipants, nameTrim]);
-                        setShowAdminNotification(true);
-                    }
-                    setName('');
-                    setShowPaymentModal(false);
-                    setShowDuplicateModal(false);
-                } catch (error) {
-                    console.error('Ошибка добавления участника:', error);
-                    setDuplicateMessage('Ошибка при добавлении заявки.');
-                    setShowDuplicateModal(true);
-                }
+                }, duration);
             };
 
             useEffect(() => {
@@ -668,36 +630,6 @@
                 }
             };
 
-            // Автоматический спин при наступлении времени
-            const handleAutoSpin = async () => {
-                try {
-                    setSpinning(true);
-                    const res = await fetch(`${BASE_URL}/spin`, { method: 'POST' });
-                    const data = await res.json();
-                    if (data.success) {
-                        const winnerName = data.winner;
-                        const idx = participants.findIndex(p => p === winnerName);
-                        const segmentAngle = 360 / participants.length;
-                        const extraRot = 360 * 3;
-                        const finalRot = extraRot + (360 - idx * segmentAngle - segmentAngle / 2);
-                        setRotation(rotation + finalRot);
-                        setTimeout(() => {
-                            setWinner(winnerName);
-                            setSpinning(false);
-                            setSpinTriggered(false);
-                            setShowFireworks(true);
-                            setShowWinnerAnimation(true);
-                            clearTimeout(winnerTimeoutRef.current);
-                            winnerTimeoutRef.current = setTimeout(() => {
-                                setShowWinnerAnimation(false);
-                                setWinner(null);
-                            }, 30000);
-                            setTimeout(() => setShowFireworks(false), 1500);
-                        }, 3000);
-                    }
-                } catch (err) { console.error('Auto spin error:', err); }
-            };
-
             // Запуск автоспина по триггеру
             useEffect(() => {
                 if (spinTriggered && !spinning) {
@@ -722,6 +654,8 @@
                         onClose={() => setShowDuplicateModal(false)}
                     />
                     <WinnerAnimationOverlay winner={showWinnerAnimation ? winner : null} />
+                    <ReviewModal isOpen={showReviewModal} onClose={() => { setShowReviewModal(false); fetchData(); }} />
+                    <WinnerModal isOpen={showWinnerModal} winner={winnerResult} onClose={() => setShowWinnerModal(false)} />
                     <button
                         onClick={() => setShowSidebar(true)}
                         className="fixed top-2 left-2 p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 z-50"
@@ -819,13 +753,13 @@
                                 </p>
                             </div>
                         )}
+                        {timerTime && <div className="text-sm text-gray-400 mb-1">Следующий розыгрыш: {timerTime}</div>}
                         {showFireworks && <Fireworks />}
                         <Wheel
-                            participants={participants}
-                            winner={winner}
-                            spinning={spinning}
-                            rotation={rotation}
-                            canvasSize={canvasSize}
+                            mustStartSpinning={isSpinning}
+                            prizeNamespace={participants.map(item => ({ option: item, style: {} }))}
+                            spinDuration={spinDuration}
+                            onStopSpinning={() => {/* noop, handled by timeout above */}}
                         />
                     </div>
                     <div className="w-full p-2 bg-gray-800 rounded-lg mt-2">
