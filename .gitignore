@@ -5,3 +5,5 @@ functions/node_modules/
 /hooks/functions/logs/
 # Temporary files
 *.log
+# Environment variables
+.env
