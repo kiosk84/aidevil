@@ -314,7 +314,6 @@ bot.action(/^approve_(.+)$/, async (ctx) => {
       if (err2) logger.error('Error inserting participant:', err2);
     });
     db.run('DELETE FROM pending WHERE name = ?', [name]);
-    db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1');
     bot.telegram.sendMessage(telegramId, '🎉 Ваша заявка подтверждена! Добро пожаловать в игру.');
     ctx.editMessageReplyMarkup({ inline_keyboard: [] });
   });
