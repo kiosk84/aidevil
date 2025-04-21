@@ -1,9 +1,10 @@
 {
     "name": "fortune-wheel",
     "version": "1.0.0",
-    "main": "functions/index.js",
+    "main": "server.js",
     "scripts": {
-        "start": "node functions/index.js",
+        "start": "node server.js",
+        "start:bot": "node functions/index.js",
         "postinstall": "npm rebuild sqlite3 --build-from-source"
     },
     "dependencies": {

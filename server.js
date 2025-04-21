@@ -1,8 +1,8 @@
 const express = require('express');
-const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // API routes
 const participantsRoute = require('./functions/routes/participants');
@@ -13,8 +13,8 @@ const spinRoute = require('./functions/routes/spin');
 const timerRoute = require('./functions/routes/timer');
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+app.use(express.json());
 
 // Mount API endpoints
 app.use('/participants', participantsRoute);
