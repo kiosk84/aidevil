@@ -165,6 +165,7 @@
                         height: '140px',
                         background: '#00ffff',
                         boxShadow: '0 0 8px #00ffff',
+                        border: '1px solid #001f3f',
                         zIndex: 3,
                         borderRadius: '1px'
                     }} />
@@ -181,13 +182,11 @@
                         {/* Segment labels inside rotating wheel */}
                         {data.length > 0 && data.map((item, i) => {
                             const angle = (i * seg + seg / 2) * Math.PI / 180;
-                            const x = 150 + Math.cos(angle) * 120;
-                            const y = 150 + Math.sin(angle) * 120;
                             return (
                                 <div key={i} style={{
-                                    position: 'absolute', left: `${x}px`, top: `${y}px`,
-                                    transform: `translate(-50%, -50%) rotate(${angle + Math.PI / 2}rad)`,
-                                    transformOrigin: 'center',
+                                    position: 'absolute', top: '50%', left: '50%',
+                                    transform: `rotate(${angle}rad) translate(0, -140px)`,
+                                    transformOrigin: 'center center',
                                     color: '#fff',
                                     fontSize: '14px',
                                     fontFamily: 'Arial Black, sans-serif',
@@ -807,21 +806,28 @@
                         <CustomWheel
                             mustStartSpinning={isSpinning}
                             data={participants.length > 0 ? participants.map(p => ({ option: p })) : [{ option: 'Нет участников', color: '#444' }]}
-                            onStopSpinning={(win) => {
+                            onStopSpinning={async () => {
                                 setIsSpinning(false);
                                 spinTriggeredRef.current = false;
-                                if (win && win.option !== 'Нет участников') {
-                                    setWinner({ name: win.option, prize: prizePool });
-                                    setShowWinnerOverlay(true);
-                                    // hide overlay and reset after 5 seconds
-                                    setTimeout(() => {
-                                        setShowWinnerOverlay(false);
-                                        setWinner(null);
+                                try {
+                                    const res = await fetch(`${BASE_URL}/spin`, { method: 'POST' });
+                                    const data = await res.json();
+                                    if (data.success && data.winner) {
+                                        setWinner({ name: data.winner, prize: prizePool });
+                                        setShowWinnerOverlay(true);
+                                        // hide overlay and reset after 5 seconds
+                                        setTimeout(() => {
+                                            setShowWinnerOverlay(false);
+                                            setWinner(null);
+                                        }, 5000);
+                                        // refresh participants and prize pool history
                                         fetchData();
-                                    }, 5000);
+                                    }
+                                } catch (err) {
+                                    console.error('Error saving winner:', err);
                                 }
                             }}
-                            spinTime={7}
+                            spinTime={5}
                         />
                         {/* Winner overlay */}
                         {showWinnerOverlay && winner && (
