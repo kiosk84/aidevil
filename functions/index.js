@@ -516,19 +516,16 @@ if (process.env.HOST_URL) {
   const hookPath = process.env.WEBHOOK_PATH || '/bot';
   app.post(
     hookPath,
-    bodyParser.raw({ type: 'application/json' }),
-    (req, res) => {
-      let update;
+    bodyParser.json(), async (req, res) => {
       try {
-        const rawBody = req.body.toString('utf8');
-        update = JSON.parse(rawBody);
+        const update = req.body;
+        logger.info(`Webhook update received: ${JSON.stringify(update)}`);
+        await bot.handleUpdate(update);
+        return res.sendStatus(200);
       } catch (err) {
-        logger.error('Webhook parse error:', err);
-        return res.status(400).send('Invalid JSON');
+        logger.error('Webhook error:', err);
+        return res.status(400).send('Invalid update');
       }
-      logger.info(`Webhook update received: ${JSON.stringify(update)}`);
-      return bot.handleUpdate(update, res)
-        .catch(err => logger.error('Webhook update error:', err));
     }
   );
 }

@@ -6,7 +6,6 @@ function runLottery() {
     db.all('SELECT * FROM participants', [], (err, participants) => {
       if (err) return reject(err);
       if (!participants || participants.length === 0) {
-        bot.telegram.sendMessage(ADMIN_ID, 'Розыгрыш не состоялся: нет участников.');
         return resolve(null);
       }
 
