@@ -52,6 +52,20 @@
 
 ---
 
+## Деплой на Railway
+1. Убедитесь, что ваш репозиторий подключён к Railway.
+2. В разделе **Variables** Dashboard укажите:
+   - `FRONTEND_URL` (например `https://your-domain.railway.app`)
+   - `DATABASE_URL` (Railway PostgreSQL или SQLite URL)
+   - `TELEGRAM_BOT_TOKEN`
+3. В разделе **Deploy** выберите ветку `main` и нажмите **Deploy**.
+4. Railway автоматически запустит сервисы по `Procfile`:
+   - `web: node server.js`
+   - `worker: node functions/index.js`
+5. После успешного деплоя проверьте логи в Railway Dashboard для подтверждения старта.
+
+---
+
 ## Безопасность и администрирование
 - Доступ к админ-командам ограничен по Telegram ID.
 - Все действия с участниками и розыгрышами логируются.
