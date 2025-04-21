@@ -12,6 +12,7 @@ const pendingRoute = require('./routes/pending');
 const winnersRoute = require('./routes/winners');
 const prizepoolRoute = require('./routes/prizepool');
 const spinRoute = require('./routes/spin');
+const timerRoute = require('./routes/timer');
 
 // Инициализация таблиц
 db.serialize(() => {
@@ -411,6 +412,15 @@ bot.command('settimer', (ctx) => {
 // Express API
 const app = express();
 
+// Serve static front-end files
+const path = require('path');
+app.use(express.static(path.join(__dirname, '..')));
+
+// Enable CORS
+app.use(cors());
+// Parse JSON bodies
+app.use(bodyParser.json());
+
 // Webhook endpoint: raw parsing to capture updates and log them
 if (process.env.HOST_URL) {
   const hookPath = process.env.WEBHOOK_PATH || '/bot';
@@ -435,9 +445,6 @@ if (process.env.HOST_URL) {
 app.use(express.json());
 app.use(cors());
 
-// Серверим статическую папку с фронтендом
-app.use(express.static(path.join(__dirname, '..')));
-
 // Главная страница
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
@@ -449,6 +456,7 @@ app.use('/pending', pendingRoute);
 app.use('/winners', winnersRoute);
 app.use('/prizepool', prizepoolRoute);
 app.use('/spin', spinRoute);
+app.use('/timer', timerRoute);
 
 // Запуск бота: polling локально, webhook в продакшн
 bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));

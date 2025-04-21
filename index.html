@@ -452,7 +452,6 @@
             const [name, setName] = useState('');
             const [spinning, setSpinning] = useState(false);
             const [winner, setWinner] = useState(null);
-            const [countdown, setCountdown] = useState(null);
             const [prizePool, setPrizePool] = useState(0);
             const [winnersHistory, setWinnersHistory] = useState([]); // История победителей
             const [showFireworks, setShowFireworks] = useState(false);
@@ -476,6 +475,8 @@
             const rotationRef = useRef(0);
             const winnerTimeoutRef = useRef(null);
             const prevPendingRef = useRef([]);
+            const deadlineRef = useRef(null);
+            const [countdown, setCountdown] = useState(null);
 
             const fetchData = async () => {
                 try {
@@ -549,38 +550,25 @@
 
             useEffect(() => {
                 if (!timerEnabled) return;
-
-                const getNextSpinTime = () => {
-                    const now = new Date();
-                    const [hh, mm] = scheduledTime.split(':').map(Number);
-                    const targetTime = new Date();
-                    targetTime.setHours(hh, mm, 0, 0);
-                    if (now >= targetTime) {
-                        targetTime.setDate(targetTime.getDate() + 1);
-                    }
-                    return targetTime;
-                };
-
-                const interval = setInterval(() => {
-                    const now = new Date();
-                    const targetTime = getNextSpinTime();
-                    const diff = targetTime - now;
-
-                    if (diff <= 1000 && !spinTriggered) {
+                deadlineRef.current = Date.now() + 5 * 60 * 1000;
+                const tick = () => {
+                    const diff = deadlineRef.current - Date.now();
+                    if (diff <= 0) {
+                        setCountdown('00:00:00');
                         setSpinTriggered(true);
-                    } else if (diff > 1000) {
+                        deadlineRef.current = Date.now() + 5 * 60 * 1000;
+                    } else {
                         setSpinTriggered(false);
-                        const hours = Math.floor(diff / 3600000);
-                        const minutes = Math.floor((diff % 3600000) / 60000);
-                        const seconds = Math.floor((diff % 60000) / 1000);
-                        setCountdown(
-                            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-                        );
+                        const h = Math.floor(diff / 3600000);
+                        const m = Math.floor((diff % 3600000) / 60000);
+                        const s = Math.floor((diff % 60000) / 1000);
+                        setCountdown(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`);
                     }
-                }, 1000);
-
-                return () => clearInterval(interval);
-            }, [timerEnabled, spinTriggered, scheduledTime]);
+                };
+                tick();
+                const id = setInterval(tick, 1000);
+                return () => clearInterval(id);
+            }, [timerEnabled]);
 
             const handlePaymentConfirm = async (participantName) => {
                 const nameTrim = participantName.trim();

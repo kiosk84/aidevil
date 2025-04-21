@@ -5,9 +5,6 @@ const router = express.Router();
 
 // POST /spin
 router.post('/', (req, res) => {
-  const { adminId } = req.body;
-  if (adminId !== ADMIN_ID) return res.status(403).json({ error: 'Access denied' });
-
   runLottery()
     .then((winner) => {
       if (winner) res.json({ success: true, winner });
