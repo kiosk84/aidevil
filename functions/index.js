@@ -60,7 +60,7 @@ bot.command('start', (ctx) => {
           [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${ctx.from.id}` } }],
           [{ text: 'Список участников', callback_data: 'getParticipants' }, { text: 'История победителей', callback_data: 'getWinners' }],
           [{ text: 'Призовой фонд', callback_data: 'getPrizePool' }, { text: 'Сброс', callback_data: 'reset' }],
-          [{ text: 'Spin', callback_data: 'spin' }, { text: 'Удалить участника', callback_data: 'deletePrompt' }]
+          [{ text: 'Установить таймер', callback_data: 'timerPrompt' }, { text: 'Удалить участника', callback_data: 'deletePrompt' }]
         ]
       }
     });
@@ -370,6 +370,42 @@ bot.action('deletePrompt', async (ctx) => {
   if (ctx.from.id.toString() !== ADMIN_ID) return;
   ctx.answerCbQuery();
   ctx.reply('Введите имя участника для удаления: /delete <имя>');
+});
+
+bot.action('timerPrompt', async (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  ctx.answerCbQuery();
+  ctx.reply('Введите время автоспина в формате HH:MM: /settimer HH:MM');
+});
+
+// Команда установки таймера автоспина (только для админа)
+bot.command('settimer', (ctx) => {
+  if (ctx.from.id.toString() !== ADMIN_ID) return;
+  const parts = ctx.message.text.split(' ');
+  if (parts.length < 2) return ctx.reply('Укажите время: /settimer HH:MM');
+  const [hh, mm] = parts[1].split(':').map(Number);
+  if (isNaN(hh) || isNaN(mm) || hh<0 || hh>23 || mm<0 || mm>59) return ctx.reply('Неверный формат времени');
+  // Очистить предыдущий таймер
+  if (scheduledSpin) clearTimeout(scheduledSpin);
+  const now = new Date();
+  let target = new Date(now);
+  target.setHours(hh, mm, 0, 0);
+  if (target <= now) target.setDate(target.getDate()+1);
+  const diff = target - now;
+  ctx.reply(`Таймер установлен на ${parts[1]}. Спин: ${target.toLocaleString()}`);
+  scheduledSpin = setTimeout(() => {
+    const chatId = ctx.chat.id;
+    bot.telegram.sendMessage(chatId, '🎡 Автоспин: вращаем колесо...');
+    db.all('SELECT name, telegramId FROM participants', (err, rows) => {
+      if (err || !rows.length) {
+        return bot.telegram.sendMessage(chatId, 'Нет участников для спина.');
+      }
+      const winner = rows[Math.floor(Math.random() * rows.length)];
+      const prize = Math.floor(Math.random() * 1000);
+      db.run('INSERT INTO winners (name, telegramId, prize, timestamp) VALUES (?, ?, ?, ?)', [winner.name, winner.telegramId, prize, Date.now()]);
+      bot.telegram.sendMessage(chatId, `Победитель: ${winner.name}, приз: ${prize}₽`);
+    });
+  }, diff);
 });
 
 // Express API
