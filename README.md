@@ -55,9 +55,10 @@
 - Frontend (Next.js):
   ```bash
   cd frontend
-  npm install
+  npm install      # установит все зависимости, включая react-icons
   npm run dev      # запустит Next.js на :3000
   ```
++**Важно:** при добавлении новых зависимостей (например, `react-icons`) выполните `npm install` заново в папке `frontend`.
 
 ---
 
