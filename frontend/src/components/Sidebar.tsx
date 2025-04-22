@@ -1,0 +1,43 @@
+"use client";
+import React from 'react';
+
+interface SidebarProps {
+  isOpen: boolean;
+  onShowInstructions: () => void;
+  onShowHistory: () => void;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onShowInstructions, onShowHistory, onClose }: SidebarProps) {
+  const style = {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: '16rem',
+    backgroundColor: '#1F2937', // tailwind bg-gray-800
+    color: '#fff',
+    padding: '1rem',
+    zIndex: isOpen ? 50 : -1,
+    pointerEvents: isOpen ? 'auto' as const : 'none' as const,
+    transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+    transition: 'transform 0.3s ease-in-out',
+  };
+  return (
+    <div style={style}>
+      <button onClick={onClose} className="mb-4 focus:outline-none">Закрыть ✕</button>
+      <ul className="space-y-2">
+        <li>
+          <button onClick={onShowInstructions} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
+            Инструкция
+          </button>
+        </li>
+        <li>
+          <button onClick={onShowHistory} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
+            История
+          </button>
+        </li>
+      </ul>
+    </div>
+  );
+}

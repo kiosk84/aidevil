@@ -1,62 +1,48 @@
 "use client";
-import React, { useState } from 'react';
-import { Wheel } from 'react-custom-roulette';
-import { spinWheel } from '../lib/api';
+import React, { useRef } from 'react';
 
-interface WheelComponentProps {
-  participants: string[];
+export interface Participant {
+  id: string;
+  color: string;
 }
 
-const WheelComponent: React.FC<WheelComponentProps> = ({ participants }) => {
-  const [mustSpin, setMustSpin] = useState(false);
-  const [winner, setWinner] = useState<string | null>(null);
+interface WheelProps {
+  participants: Participant[];
+}
 
-  const data = participants.map(name => ({ option: name }));
+const Wheel: React.FC<WheelProps> = ({ participants }) => {
+  const wheelRef = useRef<SVGGElement>(null);
 
-  const handleSpinClick = () => {
-    if (participants.length === 0) return;
-    setMustSpin(true);
-  };
-
-  const handleStopSpinning = async (prizeIndex: number) => {
-    const selected = data[prizeIndex].option;
-    setWinner(selected);
-    setMustSpin(false);
-    try {
-      const res = await spinWheel();
-      console.log('Server spin result', res);
-      // Refresh participants list after spin
-      window.location.reload();
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const radius = 150;
+  const center = 200;
+  const sliceAngle = 360 / participants.length;
 
   return (
     <div className="flex flex-col items-center">
-      <Wheel
-        mustStartSpinning={mustSpin}
-        data={data}
-        // @ts-ignore: react-custom-roulette typedef mismatch for onStopSpinning
-        onStopSpinning={handleStopSpinning}
-        backgroundColors={["#3e3e3e", "#1a1a1a"]}
-        textColors={["#ffffff"]}
-        outerBorderColor="#f2f2f2"
-        outerBorderWidth={5}
-        innerBorderColor="#e5e5e5"
-        innerBorderWidth={15}
-        radiusLineColor="#ffffff"
-      />
-      <button
-        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        onClick={handleSpinClick}
-        disabled={mustSpin || participants.length === 0}
-      >
-        Вращать
-      </button>
-      {winner && <div className="mt-4 text-xl">Победитель: <span className="font-bold">{winner}</span></div>}
+      <svg width="400" height="400" viewBox="0 0 400 400">
+        <g ref={wheelRef} style={{ transformOrigin: `${center}px ${center}px` }}>
+          {participants.map((p, i) => {
+            const startAngle = sliceAngle * i;
+            const endAngle = sliceAngle * (i + 1);
+            const x1 = center + radius * Math.cos((Math.PI / 180) * startAngle);
+            const y1 = center + radius * Math.sin((Math.PI / 180) * startAngle);
+            const x2 = center + radius * Math.cos((Math.PI / 180) * endAngle);
+            const y2 = center + radius * Math.sin((Math.PI / 180) * endAngle);
+            return (
+              <path
+                key={p.id}
+                d={`M${center},${center} L${x1},${y1} A${radius},${radius} 0 0,1 ${x2},${y2} Z`}
+                fill={p.color}
+              />
+            );
+          })}
+          {/* Pointer */}
+          <polygon points="190,10 200,30 210,10" fill="red" />
+        </g>
+      </svg>
     </div>
   );
 };
 
-export default WheelComponent;
+export default Wheel;
+// Removed gsap import since automatic spin handled by backend/timer

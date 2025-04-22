@@ -1,4 +1,6 @@
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+console.log('DEBUG: Loaded BOT_TOKEN=', process.env.BOT_TOKEN);
 const db = require('./db');
 const { bot, ADMIN_ID } = require('./bot');
 const express = require('express');
@@ -517,6 +519,7 @@ function scheduleHourlySpin() {
 
 // Express API
 const app = express();
+app.use(cors());
 
 // Serve static front-end files
 app.use(express.static(require('path').join(__dirname, '..')));
@@ -574,7 +577,8 @@ bot.catch((err, ctx) => logger.error(`Bot error: ${ctx.updateType}`, err));
 const HOST_URL = process.env.HOST_URL;
 const WEBHOOK_PATH = process.env.WEBHOOK_PATH || '/bot';
 logger.info(`HOST_URL=${HOST_URL}, WEBHOOK_PATH=${WEBHOOK_PATH}`);
-if (HOST_URL) {
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction && HOST_URL) {
   // Production Webhook
   (async () => {
     try {
