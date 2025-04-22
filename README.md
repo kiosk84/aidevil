@@ -44,25 +44,45 @@
 
 ---
 
-## Как запустить
-1. Установите зависимости (`npm install` для backend).
-2. Запустите backend: `node functions/index.js`
-3. Откройте `index.html` в браузере (или разверните на сервере).
-4. Настройте Telegram-бота с помощью BotFather и пропишите токен в коде.
+## Как запустить локально
+- Backend (API и бот):
+  ```bash
+  # в корне репо
+  npm install
+  npm start        # запустит сервер Express на :8080
+  npm run start:bot # запустит Telegram-бота
+  ```
+- Frontend (Next.js):
+  ```bash
+  cd frontend
+  npm install
+  npm run dev      # запустит Next.js на :3000
+  ```
 
 ---
 
-## Деплой на Railway
-1. Убедитесь, что ваш репозиторий подключён к Railway.
-2. В разделе **Variables** Dashboard укажите:
-   - `FRONTEND_URL` (например `https://your-domain.railway.app`)
-   - `DATABASE_URL` (Railway PostgreSQL или SQLite URL)
-   - `TELEGRAM_BOT_TOKEN`
-3. В разделе **Deploy** выберите ветку `main` и нажмите **Deploy**.
-4. Railway автоматически запустит сервисы по `Procfile`:
-   - `web: node server.js`
-   - `worker: node functions/index.js`
-5. После успешного деплоя проверьте логи в Railway Dashboard для подтверждения старта.
+## Деплой на Railway (backend + бот)
+1. Репозиторий подключён к Railway.
+2. В **Settings → Variables** указать:
+   - BOT_TOKEN
+   - ADMIN_ID
+   - HOST_URL (https://ваш-backend.up.railway.app)
+   - WEBHOOK_PATH (например `/bot`)
+3. В **Deploy** нажать **Deploy**.
+4. Railway запустит процесс из Procfile:
+   ```text
+   worker: npm ci --prefix functions && npm start --prefix functions
+   ```
+5. Проверьте логи в Dashboard — бот и API должны работать.
+
+---
+
+## Деплой фронтенда на Vercel
+1. В Vercel создать проект, выбрать папку `frontend`.
+2. В **Environment Variables** добавить:
+   - NEXT_PUBLIC_API_URL=https://ваш-backend.up.railway.app
+3. По умолчанию Vercel соберёт Next.js и раздаст на своём домене.
+4. Убедитесь, что API-запросы к `/api/...` проксируются на Railway.
 
 ---
 
