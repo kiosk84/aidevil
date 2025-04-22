@@ -81,9 +81,26 @@
 ## Деплой фронтенда на Vercel
 1. В Vercel создать проект, выбрать папку `frontend`.
 2. В **Environment Variables** добавить:
-   - NEXT_PUBLIC_API_URL=https://ваш-backend.up.railway.app
-3. По умолчанию Vercel соберёт Next.js и раздаст на своём домене.
-4. Убедитесь, что API-запросы к `/api/...` проксируются на Railway.
+    - NEXT_PUBLIC_API_URL=https://ваш-backend.up.railway.app
+3. В разделе **Install Command** установить: `npm install`
+4. В разделе **Build Command** оставить: `npm run build`
+5. Output Directory — стандартный для Next.js
++**Важно:** без `npm install` новые зависимости (например `react-icons`) не попадут в билд.
+
+---
+
+## Developer Notes
+- Для компонентов в `frontend/src/components` и `frontend/src/app`: добавьте в начало файлов директиву:
+  ```js
+  "use client";
+  ```
+- В `Navbar.tsx` проп `onMenuToggle` переименован в `onMenuToggleAction`.
+- После любых изменений компонентов (например, добавления `"use client"`) выполните:
+  ```bash
+  cd frontend
+  npm install  # если добавляли зависимости
+  npm run build
+  ```
 
 ---
 
