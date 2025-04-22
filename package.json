@@ -4,8 +4,7 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
-        "start:bot": "node functions/index.js",
-        "postinstall": "npm rebuild sqlite3 --build-from-source"
+        "start:bot": "node functions/index.js"
     },
     "dependencies": {
         "cors": "^2.8.5",

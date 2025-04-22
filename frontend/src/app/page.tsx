@@ -64,7 +64,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-0 flex flex-col">
-      <Navbar onMenuToggle={() => setSidebarOpen(true)} />
+      <Navbar onMenuToggleAction={() => setSidebarOpen(true)} />
       <Sidebar
         isOpen={sidebarOpen}
         onShowInstructions={() => { setInstrOpen(true); setSidebarOpen(false); }}
