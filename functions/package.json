@@ -6,8 +6,7 @@
     "shell": "firebase functions:shell",
     "start": "node index.js",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log",
-    "postinstall": "npm rebuild sqlite3 --build-from-source"
+    "logs": "firebase functions:log"
   },
   "engines": {
     "node": "18"
