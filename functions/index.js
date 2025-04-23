@@ -593,6 +593,10 @@ if (isProduction && HOST_URL) {
       logger.error('Ошибка установки webhook:', err);
     }
   })();
+  // Mount webhook handling for incoming updates
+  app.use(WEBHOOK_PATH, bodyParser.json(), (req, res) => {
+    bot.handleUpdate(req.body, res).catch(err => logger.error('Webhook handling error:', err));
+  });
 } else {
   // Local polling
   bot.launch()
