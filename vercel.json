@@ -8,5 +8,10 @@
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://aidevil-production.up.railway.app"
+  },
+  "build": {
+    "env": {
+      "NEXT_TELEMETRY_DISABLED": "1"
+    }
   }
 }
