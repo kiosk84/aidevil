@@ -32,6 +32,8 @@ jobs:
     name: Frontend Build
     runs-on: ubuntu-latest
     needs: build
+    env:
+      NEXT_PUBLIC_API_URL: "https://aidevil-production.up.railway.app"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
