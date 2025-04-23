@@ -73,7 +73,7 @@ bot.start(async (ctx) => {
       await ctx.reply('Добро пожаловать, админ! 👑', {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${telegramId}` } }],
+            [{ text: '➡️ Открыть приложение', url: process.env.HOST_URL }],// Modified here
             [{ text: '👥 Список участников', callback_data: 'getParticipants' }, { text: '🏆 Победители', callback_data: 'getWinners' }],
             [{ text: '💰 Призовой фонд', callback_data: 'getPrizePool' }, { text: '🔄 Сброс', callback_data: 'reset' }],
             [{ text: '⏰ Установить таймер', callback_data: 'timerPrompt' }, { text: '🗑 Удалить участника', callback_data: 'deletePrompt' }]
@@ -84,7 +84,7 @@ bot.start(async (ctx) => {
       await ctx.reply(WELCOME_MESSAGE, {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '➡️ Открыть приложение', web_app: { url: `${process.env.HOST_URL}?telegramId=${telegramId}` } }],
+            [{ text: '➡️ Открыть приложение', url: process.env.HOST_URL }],// Modified here
             [{ text: '🔵 Официальный канал', url: CHANNEL_URL }]
           ]
         }
