@@ -1,10 +1,9 @@
 {
     "name": "fortune-wheel",
     "version": "1.0.0",
-    "main": "server.js",
+    "main": "functions/index.js",
     "scripts": {
-        "start": "node server.js",
-        "start:bot": "node functions/index.js"
+        "start": "node functions/index.js"
     },
     "dependencies": {
         "cors": "^2.8.5",

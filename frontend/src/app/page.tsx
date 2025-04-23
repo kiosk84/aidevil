@@ -32,8 +32,14 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       // Fallback: get telegramId from URL params
       const params = new URLSearchParams(window.location.search);
-      const tidParam = params.get('telegramId');
-      if (tidParam) setTelegramId(tidParam);
+      let tidParam = params.get('telegramId');
+      // ВРЕМЕННО для теста: если нет telegramId, подставлять test_user1 или test_user2 по query-параметру ?test=1 или ?test=2
+      const testParam = params.get('test');
+      if (!tidParam) {
+        if (testParam === '2') tidParam = 'test_user2';
+        else tidParam = 'test_user1';
+      }
+      setTelegramId(tidParam || '');
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.ready();
         const user = window.Telegram.WebApp.initDataUnsafe?.user;
@@ -77,16 +83,16 @@ export default function Home() {
       <Navbar onMenuToggleAction={() => setSidebarOpen(true)} />
       <Sidebar
         isOpen={sidebarOpen}
-        onShowInstructions={() => { setInstrOpen(true); setSidebarOpen(false); }}
-        onShowHistory={() => { setHistoryOpen(true); setSidebarOpen(false); }}
-        onClose={() => setSidebarOpen(false)}
+        onShowInstructionsAction={() => { setInstrOpen(true); setSidebarOpen(false); }}
+        onShowHistoryAction={() => { setHistoryOpen(true); setSidebarOpen(false); }}
+        onCloseAction={() => setSidebarOpen(false)}
       />
       <InstructionModal isOpen={instrOpen} onClose={() => setInstrOpen(false)} />
       <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
       <div className="flex-1 flex flex-col items-center justify-evenly px-2 pt-6 pb-1 min-h-0">
         <div className="mb-4 w-full max-w-md bg-gray-900 bg-opacity-90 backdrop-blur-md p-4 rounded-md text-center">
           <p className="text-white mb-2">До следующего розыгрыша:</p>
-          <TimerDisplay initialTime={3600} />
+          <TimerDisplay />
           <div className="mt-2 text-center">
             <p className="text-white text-xl font-bold">Призовой фонд:</p>
             <p className="text-green-400 text-3xl font-bold">{prizePool > 0 ? prizePool : 0}₽</p>

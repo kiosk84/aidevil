@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   db.get('SELECT amount FROM prize_pool WHERE id = 1', (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
-    res.json({ amount: row.amount });
+    res.json({ total: row.amount });
   });
 });
 

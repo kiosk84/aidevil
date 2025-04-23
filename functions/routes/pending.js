@@ -1,9 +1,11 @@
 const express = require('express');
 const db = require('../db');
+// Import bot and ADMIN_ID from the bot module to avoid cyclic dependency
 const { bot, ADMIN_ID } = require('../bot');
 const router = express.Router();
 
-// GET /pending
+// GET /pending (List pending names - requires admin check potentially)
+// TODO: Add authentication/authorization check if this should be admin-only
 router.get('/', (req, res) => {
   db.all('SELECT name FROM pending', (err, rows) => {
     if (err) return res.status(500).json({ error: 'Database error' });

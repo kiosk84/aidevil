@@ -1,6 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Allow HMR websocket connections from LAN addresses
+  allowedDevOrigins: [
+    'http://localhost:3000',
+    'http://192.168.0.107:3000'
+  ],
   reactStrictMode: true,
   async headers() {
     return [

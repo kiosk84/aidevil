@@ -3,12 +3,12 @@ import React from 'react';
 
 interface SidebarProps {
   isOpen: boolean;
-  onShowInstructions: () => void;
-  onShowHistory: () => void;
-  onClose: () => void;
+  onShowInstructionsAction: () => void;
+  onShowHistoryAction: () => void;
+  onCloseAction: () => void;
 }
 
-export default function Sidebar({ isOpen, onShowInstructions, onShowHistory, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onShowInstructionsAction, onShowHistoryAction, onCloseAction }: SidebarProps) {
   const style = {
     position: 'fixed' as const,
     top: 0,
@@ -25,15 +25,15 @@ export default function Sidebar({ isOpen, onShowInstructions, onShowHistory, onC
   };
   return (
     <div style={style}>
-      <button onClick={onClose} className="mb-4 focus:outline-none">Закрыть ✕</button>
+      <button onClick={onCloseAction} className="mb-4 focus:outline-none">Закрыть ✕</button>
       <ul className="space-y-2">
         <li>
-          <button onClick={onShowInstructions} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
+          <button onClick={onShowInstructionsAction} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
             Инструкция
           </button>
         </li>
         <li>
-          <button onClick={onShowHistory} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
+          <button onClick={onShowHistoryAction} className="w-full text-left px-2 py-2 hover:bg-gray-700 rounded">
             История
           </button>
         </li>
