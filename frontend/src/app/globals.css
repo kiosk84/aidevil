@@ -126,3 +126,14 @@ body {
   margin: 0.5em 0;
   animation: overlay-pop 0.5s ease-out;
 }
+
+/* Neon glow animation */
+@keyframes neonGlow {
+  0%, 100% { box-shadow: 0 0 20px #ff00cc; }
+  33% { box-shadow: 0 0 20px #00ffcc; }
+  66% { box-shadow: 0 0 20px #cc00ff; }
+}
+.neon-glow {
+  animation: neonGlow 4s infinite;
+  border-radius: 50%;
+}

@@ -8,7 +8,7 @@ interface ParticipantListProps {
 export default function ParticipantList({ participants }: ParticipantListProps) {
   return (
     <div className="text-white">
-      <h2 className="text-center text-xl font-semibold mb-2 gradient-text">Участники</h2>
+      <h2 className="text-center text-lg font-semibold mb-1 gradient-text">Участники</h2>
       <ul className="list-disc list-inside space-y-1 max-h-48 overflow-y-auto">
         {participants.length > 0 ? (
           participants.map((name, idx) => (

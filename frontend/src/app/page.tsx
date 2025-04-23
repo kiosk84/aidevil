@@ -10,6 +10,8 @@ import Sidebar from '../components/Sidebar';
 import InstructionModal from '../components/InstructionModal';
 import HistoryModal from '../components/HistoryModal';
 import DuplicateModal from '../components/DuplicateModal';
+import PendingModal from '../components/PendingModal';
+import SplashScreen from '../components/SplashScreen';
 
 export default function Home() {
   const [participants, setParticipants] = useState<string[]>([]);
@@ -21,6 +23,8 @@ export default function Home() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [duplicateMessage, setDuplicateMessage] = useState<string>('');
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showPending, setShowPending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const reload = () => getParticipants().then(setParticipants).catch(console.error);
 
   useEffect(() => {
@@ -40,6 +44,11 @@ export default function Home() {
     // TimerDisplay handles timer polling and auto-spin
     const interval = setInterval(() => {}, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   const colors = ["#fa709a", "#fee140", "#00c9ff", "#92fe9d", "#f5576c", "#4facfe", "#43e97b", "#38f9d7"];
@@ -62,6 +71,7 @@ export default function Home() {
     }
   };
 
+  if (loading) return <SplashScreen />;
   return (
     <div className="min-h-screen bg-gray-900 text-white p-0 flex flex-col">
       <Navbar onMenuToggleAction={() => setSidebarOpen(true)} />
@@ -73,8 +83,8 @@ export default function Home() {
       />
       <InstructionModal isOpen={instrOpen} onClose={() => setInstrOpen(false)} />
       <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
-      <div className="pt-16 p-6 flex-1 flex flex-col items-center space-y-4">
-        <div className="mb-6 w-full max-w-md bg-gray-900 bg-opacity-90 backdrop-blur-md p-4 rounded-md text-center">
+      <div className="flex-1 flex flex-col items-center justify-evenly px-2 pt-6 pb-1 min-h-0">
+        <div className="mb-4 w-full max-w-md bg-gray-900 bg-opacity-90 backdrop-blur-md p-4 rounded-md text-center">
           <p className="text-white mb-2">До следующего розыгрыша:</p>
           <TimerDisplay initialTime={3600} />
           <div className="mt-2 text-center">
@@ -82,9 +92,11 @@ export default function Home() {
             <p className="text-green-400 text-3xl font-bold">{prizePool > 0 ? prizePool : 0}₽</p>
           </div>
         </div>
-        <WheelComponent participants={participantsWithColor} />
+        <div className="-mt-6 neon-glow p-2 mb-4">
+          <WheelComponent participants={participantsWithColor} />
+        </div>
         {/* Unified Participate & Participants container */}
-        <div className="w-full max-w-md flex flex-col space-y-2">
+        <div className="w-full max-w-md flex flex-col space-y-1">
           <button
             onClick={handleParticipate}
             className="participate-btn w-full rounded-full"
@@ -93,10 +105,11 @@ export default function Home() {
           </button>
           <ParticipateModal
             isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            onSuccess={reload}
+            onCloseAction={() => setModalOpen(false)}
+            onSuccessAction={reload}
             telegramId={telegramId}
           />
+          <PendingModal isOpen={showPending} onClose={() => setShowPending(false)} />
           <div className="bg-gray-800 p-4 rounded-b-xl">
             <ParticipantList participants={participants} />
           </div>

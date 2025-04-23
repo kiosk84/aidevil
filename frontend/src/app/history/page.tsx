@@ -6,7 +6,7 @@ export default function History() {
   const [winners, setWinners] = useState<Winner[]>([]);
 
   useEffect(() => {
-    getWinners().then((data) => setWinners(data)).catch(console.error);
+    getWinners().then((data: Winner[]) => setWinners(data)).catch(console.error);
   }, []);
 
   return (

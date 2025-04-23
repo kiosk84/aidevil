@@ -48,6 +48,15 @@ export async function getTimer(): Promise<{ secondsRemaining: number }> {
 }
 
 /**
+ * Fetch next spin time for the countdown timer
+ */
+export async function getNextSpin(): Promise<{ nextSpinTime: string }> {
+  const res = await fetch(`${API_URL}/next-spin`);
+  if (!res.ok) throw new Error('Failed to fetch next spin time');
+  return res.json();
+}
+
+/**
  * Add a new participant by name
  */
 export async function postParticipant(name: string): Promise<void> {

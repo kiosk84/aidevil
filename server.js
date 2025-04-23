@@ -1,11 +1,10 @@
-const cors = require('cors');
 const path = require('path');
-const dotenv = require('dotenv');
-dotenv.config();
-// Configuration
-dotenv.config(); // loads root .env (PORT=8080, FRONTEND_URL)
-console.log('DEBUG: Server PORT=', process.env.PORT || 'undefined', 'FRONTEND_URL=', process.env.FRONTEND_URL);
+// Load environment variables in development only
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const express = require('express');
+const cors = require('cors');
 
 // API routes
 const participantsRoute = require('./functions/routes/participants');
@@ -18,12 +17,12 @@ const timerRoute = require('./functions/routes/timer');
 const app = express();
 // Log all incoming HTTP requests
 app.use((req, res, next) => { console.log(`REQ ${req.method} ${req.url} from ${req.ip}`); next(); });
-// CORS: support comma-separated FRONTEND_URL or '*' for all
-const raw = process.env.FRONTEND_URL || '*';
-const allowed = raw.split(',').map(s => s.trim());
+// CORS configuration
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // allow non-browser or postman
+    const raw = process.env.FRONTEND_URL || '*';
+    const allowed = raw.split(',').map(s => s.trim());
     if (allowed.includes('*') || allowed.includes(origin)) cb(null, true);
     else cb(new Error(`CORS blocked: ${origin}`));
   }
@@ -48,6 +47,6 @@ require('./functions/index'); // loads BOT_TOKEN and registers bot commands
 const { bot } = require('./functions/bot');
 bot.launch();
 
-// Start server on port 8080
+// Start server on port
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running at http://0.0.0.0:${PORT}`));

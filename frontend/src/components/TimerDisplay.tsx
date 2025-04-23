@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { getTimer, spinWheel } from '../lib/api';
+import { getNextSpin, spinWheel } from '../lib/api';
 
 interface TimerDisplayProps {
   initialTime?: number;
@@ -21,23 +21,21 @@ export default function TimerDisplay({ initialTime }: TimerDisplayProps) {
       }, 1000);
     } else {
       let mounted = true;
-      const fetchTimer = async () => {
+      const fetchNext = async () => {
         try {
-          const data = await getTimer();
+          const data = await getNextSpin();
           if (mounted) {
-            setTimer(data.secondsRemaining);
-            if (data.secondsRemaining === 0) spinWheel();
+            const diff = Math.max(0, Math.floor((new Date(data.nextSpinTime).getTime() - Date.now()) / 1000));
+            setTimer(diff);
+            if (diff === 0) spinWheel();
           }
         } catch (e) {
-          console.error(e);
+          console.error('Failed to fetch next spin:', e);
         }
       };
-      fetchTimer();
-      id = setInterval(fetchTimer, 1000);
-      return () => {
-        mounted = false;
-        clearInterval(id);
-      };
+      fetchNext();
+      id = setInterval(fetchNext, 1000);
+      return () => { mounted = false; clearInterval(id); };
     }
     return () => clearInterval(id);
   }, [initialTime]);
