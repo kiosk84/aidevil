@@ -1,2 +1,4 @@
 # Ignore fortune.db
 functions/db/fortune.db
+
+.vercel
