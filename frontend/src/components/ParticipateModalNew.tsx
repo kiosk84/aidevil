@@ -58,7 +58,7 @@ export default function ParticipateModal({ isOpen, onCloseAction, onSuccessActio
             <span className="text-white font-mono bg-gray-600 px-2 py-1 rounded text-xs sm:text-sm">+79536029130</span>
           </div>
           <div className="mt-2 sm:mt-3 text-xs text-gray-400">
-            Переведите указанную сумму по СБП на номер телефона (Озон Банк), затем нажмите кнопку "Оплатил".
+            Переведите указанную сумму по СБП на номер телефона (Озон Банк), затем нажмите кнопку &quot;Оплатил&quot;.
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export default function ParticipateModal({ isOpen, onCloseAction, onSuccessActio
         </div>
 
         <p className="mt-3 sm:mt-4 text-xs text-center text-gray-400">
-          После нажатия кнопки "Оплатил" ваша заявка будет отправлена на проверку администратору.
+          После нажатия кнопки &quot;Оплатил&quot; ваша заявка будет отправлена на проверку администратору.
           Вы получите уведомление о подтверждении участия.
         </p>
       </div>
