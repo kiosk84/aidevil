@@ -3,9 +3,29 @@ if (!API_URL) {
   throw new Error('NEXT_PUBLIC_API_URL environment variable is not set');
 }
 
+/**
+ * Participant with number
+ */
+export interface ParticipantWithNumber {
+  name: string;
+  number: number;
+}
+
+/**
+ * Get list of participants (names only)
+ */
 export async function getParticipants(): Promise<string[]> {
   const res = await fetch(`${API_URL}/participants`);
   if (!res.ok) throw new Error('Failed to fetch participants');
+  return res.json();
+}
+
+/**
+ * Get detailed list of participants with numbers
+ */
+export async function getDetailedParticipants(): Promise<ParticipantWithNumber[]> {
+  const res = await fetch(`${API_URL}/participants?detailed=true`);
+  if (!res.ok) throw new Error('Failed to fetch detailed participants');
   return res.json();
 }
 
@@ -62,7 +82,11 @@ export async function postParticipant(name: string): Promise<void> {
 /**
  * Submit pending participation request
  */
-export async function postPending(name: string, telegramId: string): Promise<void> {
+export async function postPending(name: string, telegramId: string): Promise<{
+  success: boolean;
+  message?: string;
+  adminAdd?: boolean;
+}> {
   const res = await fetch(`${API_URL}/pending`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -73,6 +97,7 @@ export async function postPending(name: string, telegramId: string): Promise<voi
     const msg = err.error || 'Failed to request participation';
     throw new Error(msg);
   }
+  return res.json();
 }
 
 /**

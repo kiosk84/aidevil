@@ -46,7 +46,7 @@ export default function TimerDisplay() {
   const s = (timer % 60).toString().padStart(2, '0');
 
   return (
-    <div className="digital-timer font-mono text-3xl text-yellow-400">
+    <div className="digital-timer font-mono text-lg sm:text-xl text-yellow-400">
       {h}:{m}:{s}
     </div>
   );

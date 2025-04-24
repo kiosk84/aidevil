@@ -1,4 +1,4 @@
-// Скрипт для очистки тестовых пользователей из pending и participants
+// Скрипт для очистки всех участников и сброса призового фонда
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
@@ -8,19 +8,18 @@ const db = new sqlite3.Database(dbPath, (err) => {
   else console.log('Подключено к БД:', dbPath);
 });
 
-const testIds = ['test_user1', 'test_user2', 'test_user3'];
-
 db.serialize(() => {
-  for (const tid of testIds) {
-    db.run('DELETE FROM pending WHERE telegramId = ?', [tid], (err) => {
-      if (err) console.error('Ошибка удаления из pending:', err);
-    });
-    db.run('DELETE FROM participants WHERE telegramId = ?', [tid], (err) => {
-      if (err) console.error('Ошибка удаления из participants:', err);
-    });
-  }
+  db.run('DELETE FROM pending', (err) => {
+    if (err) console.error('Ошибка очистки pending:', err);
+  });
+  db.run('DELETE FROM participants', (err) => {
+    if (err) console.error('Ошибка очистки participants:', err);
+  });
+  db.run('UPDATE prize_pool SET amount = 0 WHERE id = 1', (err) => {
+    if (err) console.error('Ошибка сброса призового фонда:', err);
+  });
 });
 
 db.close(() => {
-  console.log('Очистка завершена.');
+  console.log('Все участники и призовой фонд очищены.');
 });

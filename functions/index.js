@@ -69,12 +69,13 @@ bot.start(async (ctx) => {
     users.add(id);
     const isAdmin = id === ADMIN_ID;
     if (isAdmin) {
-      await ctx.reply('Добро пожаловать, админ! 👑', {
+      await ctx.reply('Добро пожаловать, админ! 👑\nВыберите действие:', {
         reply_markup: {
           inline_keyboard: [
             [{ text: '👥 Список участников', callback_data: 'getParticipants' }, { text: '🏆 Победители', callback_data: 'getWinners' }],
             [{ text: '💰 Призовой фонд', callback_data: 'getPrizePool' }, { text: '🔄 Сброс', callback_data: 'reset' }],
-            [{ text: '⏰ Установить таймер', callback_data: 'timerPrompt' }, { text: '🗑 Удалить участника', callback_data: 'deletePrompt' }]
+            [{ text: '➕ Добавить участника', callback_data: 'addParticipant' }, { text: '🗑 Удалить участника', callback_data: 'deletePrompt' }],
+            [{ text: '📊 Статистика', callback_data: 'getStats' }, { text: '⏰ Установить таймер', callback_data: 'timerPrompt' }]
           ]
         }
       });
@@ -150,9 +151,42 @@ bot.on('callback_query', async (ctx) => {
                         return;
                      }
                      console.log(`User ${name} (${telegramId}) approved.`);
-                     await bot.telegram.sendMessage(telegramId, '✅ Ваше участие подтверждено! Ожидайте розыгрыш.');
-                     await ctx.editMessageText(`Участник ${name} подтвержден.`);
-                     await ctx.answerCbQuery('Подтверждено');
+
+                     // Получаем текущее количество участников и призовой фонд
+                     db.get('SELECT COUNT(*) as count FROM participants', async (countErr, countRow) => {
+                       const participantsCount = countRow?.count || 1;
+                       const winChance = (100 / participantsCount).toFixed(2);
+
+                       db.get('SELECT amount FROM prize_pool WHERE id = 1', async (prizeErr, prizeRow) => {
+                         const prizePool = prizeRow?.amount || 100;
+
+                         // Отправляем подробное уведомление пользователю с кнопкой открытия приложения
+                         await bot.telegram.sendMessage(telegramId,
+                           `✅ Ваше участие подтверждено!\n\n` +
+                           `👤 Имя: ${name}\n` +
+                           `👥 Всего участников: ${participantsCount}\n` +
+                           `💰 Текущий призовой фонд: ${prizePool}₽\n` +
+                           `🎯 Ваш шанс на победу: ${winChance}%\n\n` +
+                           `⏰ Ожидайте розыгрыш! Удачи! 🍀`,
+                           {
+                             reply_markup: {
+                               inline_keyboard: [
+                                 [{ text: '🎮 Открыть приложение', web_app: { url: process.env.FRONTEND_URL || 'https://aidevil.vercel.app/' } }]
+                               ]
+                             }
+                           }
+                         );
+
+                         // Обновляем сообщение для админа
+                         await ctx.editMessageText(
+                           `✅ Участник ${name} подтвержден.\n\n` +
+                           `👥 Всего участников: ${participantsCount}\n` +
+                           `💰 Призовой фонд: ${prizePool}₽`
+                         );
+
+                         await ctx.answerCbQuery('Подтверждено');
+                       });
+                     });
                    });
                 });
               });
@@ -167,8 +201,28 @@ bot.on('callback_query', async (ctx) => {
               return;
             }
             console.log(`User ${name} (${telegramId}) rejected.`);
-            await bot.telegram.sendMessage(telegramId, '❌ Ваш платеж отклонен. Свяжитесь с поддержкой.');
-            await ctx.editMessageText(`Участник ${name} отклонен.`);
+
+            // Отправляем подробное уведомление пользователю с контактами поддержки и кнопкой
+            await bot.telegram.sendMessage(telegramId,
+              `❌ Ваша заявка на участие отклонена.\n\n` +
+              `Возможные причины:\n` +
+              `• Не найден платеж\n` +
+              `• Неверная сумма платежа\n` +
+              `• Другая проблема с платежом\n\n` +
+              `Для уточнения деталей и повторной подачи заявки, пожалуйста, свяжитесь с поддержкой:\n` +
+              `📱 Telegram: @support_contact\n` +
+              `📧 Email: support@example.com`,
+              {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '🔄 Попробовать снова', web_app: { url: process.env.FRONTEND_URL || 'https://aidevil.vercel.app/' } }]
+                  ]
+                }
+              }
+            );
+
+            // Обновляем сообщение для админа
+            await ctx.editMessageText(`❌ Заявка участника ${name} отклонена.`);
             await ctx.answerCbQuery('Отклонено');
           });
         }
@@ -213,6 +267,32 @@ bot.on('callback_query', async (ctx) => {
   } else if (data === 'deletePrompt') {
     // Запросить имя для удаления участника
     await ctx.reply('Введите имя участника, которого нужно удалить, командой: /delete Имя');
+  } else if (data === 'addParticipant') {
+    // Запросить имя для добавления участника
+    await ctx.reply('Введите имя нового участника командой: /add Имя');
+  } else if (data === 'getStats') {
+    // Показать статистику
+    db.serialize(() => {
+      db.get('SELECT COUNT(*) as count FROM participants', async (err, participantsRow) => {
+        if (err) return ctx.reply('Ошибка базы данных');
+
+        db.get('SELECT COUNT(*) as count FROM pending', async (err, pendingRow) => {
+          if (err) return ctx.reply('Ошибка базы данных');
+
+          db.get('SELECT amount FROM prize_pool WHERE id = 1', async (err, prizeRow) => {
+            if (err) return ctx.reply('Ошибка базы данных');
+
+            const stats = `📊 Статистика:\n\n` +
+                          `👥 Участников: ${participantsRow?.count || 0}\n` +
+                          `⏳ Ожидают подтверждения: ${pendingRow?.count || 0}\n` +
+                          `💰 Призовой фонд: ${prizeRow?.amount || 0}₽\n` +
+                          `⏰ Следующий розыгрыш: ${nextSpinTime ? nextSpinTime.toLocaleTimeString('ru-RU') : 'Не запланирован'}`;
+
+            await ctx.reply(stats);
+          });
+        });
+      });
+    });
   } else {
     // Handle other callback queries if necessary
     console.log(`Unhandled callback query data: ${data}`);
@@ -234,6 +314,39 @@ bot.command('delete', async (ctx) => {
     db.run('DELETE FROM participants WHERE name = ?', [name], (err2) => {
       if (err2) return ctx.reply('Ошибка при удалении');
       ctx.reply(`Участник ${name} удалён.`);
+    });
+  });
+});
+
+// Handle /add command - добавление участника админом
+bot.command('add', async (ctx) => {
+  const id = ctx.from.id.toString();
+  if (id !== ADMIN_ID) return ctx.reply('Только админ может добавлять участников.');
+  const args = ctx.message.text.split(' ').slice(1);
+  if (!args.length) return ctx.reply('Укажите имя участника: /add Имя');
+  const name = args.join(' ');
+
+  // Проверяем, существует ли уже участник с таким именем
+  db.get('SELECT 1 FROM participants WHERE name = ?', [name], (err, row) => {
+    if (err) return ctx.reply('Ошибка базы данных');
+    if (row) return ctx.reply('Участник с таким именем уже существует');
+
+    // Генерируем уникальный telegramId для участника, добавленного админом
+    const adminAddedId = `admin_added_${Date.now()}`;
+
+    // Добавляем участника
+    db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, adminAddedId], (err2) => {
+      if (err2) return ctx.reply('Ошибка при добавлении участника');
+
+      // Увеличиваем призовой фонд
+      db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1', (err3) => {
+        if (err3) {
+          console.error('Ошибка обновления призового фонда:', err3);
+          return ctx.reply('Участник добавлен, но возникла ошибка при обновлении призового фонда');
+        }
+
+        ctx.reply(`✅ Участник ${name} успешно добавлен!\n💰 Призовой фонд увеличен на 100₽`);
+      });
     });
   });
 });

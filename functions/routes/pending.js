@@ -55,6 +55,43 @@ router.post('/', (req, res) => {
   }
   if (!name || !telegramId) return res.status(400).json({ error: 'Name and telegramId required' });
 
+  // Проверка, является ли пользователь админом
+  if (telegramId === ADMIN_ID) {
+    // Для админа пропускаем проверки на существующие записи
+    // Проверяем только дубликат имени
+    db.get('SELECT * FROM pending WHERE name = ?', [name], (err3, row3) => {
+      if (row3) return res.status(409).json({ error: 'Участник с таким именем уже подал заявку.' });
+      // Вставляем в pending с уникальным telegramId для админа
+      const adminTempId = `admin_add_${Date.now()}`;
+      db.run('INSERT INTO pending (name, telegramId) VALUES (?, ?)', [name, adminTempId], (err4) => {
+        if (err4) return res.status(500).json({ error: 'DB error' });
+
+        // Автоматически подтверждаем заявку, добавленную админом
+        db.run('INSERT INTO participants (name, telegramId) VALUES (?, ?)', [name, adminTempId], function(err5) {
+          if (err5) return res.status(500).json({ error: 'Ошибка при добавлении участника' });
+
+          // Удаляем из pending
+          db.run('DELETE FROM pending WHERE telegramId = ?', [adminTempId], (err6) => {
+            if (err6) console.error('Ошибка при удалении из pending:', err6);
+
+            // Увеличиваем призовой фонд
+            db.run('UPDATE prize_pool SET amount = amount + 100 WHERE id = 1', (err7) => {
+              if (err7) console.error('Ошибка обновления призового фонда:', err7);
+
+              res.json({
+                success: true,
+                message: 'Участник успешно добавлен админом',
+                adminAdd: true
+              });
+            });
+          });
+        });
+      });
+    });
+    return;
+  }
+
+  // Для обычных пользователей - стандартные проверки
   // Check if user already pending by telegramId
   db.get('SELECT * FROM pending WHERE telegramId = ?', [telegramId], (err, row) => {
     if (row) return res.status(409).json({ error: 'Вы уже участвуете в розыгрыше. Дождитесь результатов.' });
