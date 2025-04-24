@@ -1,14 +1,2 @@
-# Ignore node modules
-node_modules/
-functions/node_modules/
-# Logs
-/hooks/functions/logs/
-# Frontend artifacts
-/frontend/.next/
-/frontend/node_modules/
-# General logs
-/logs/
-# Temporary files
-*.log
-# Environment variables
-.env
+# Ignore fortune.db
+functions/db/fortune.db
