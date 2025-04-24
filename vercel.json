@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "framework": "nextjs",
+  "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm install",
+  "framework": null,
   "env": {
     "NEXT_PUBLIC_API_URL": "https://aidevil-production.up.railway.app"
   },
