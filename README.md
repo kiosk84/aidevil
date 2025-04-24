@@ -112,6 +112,36 @@
 3. Добавьте переменную окружения:
    - `NEXT_PUBLIC_API_URL` — URL вашего бэкенда
 
+## 🚀 Deployment Instructions
+
+### GitHub
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd hooks
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Run the project:
+   ```bash
+   npm start
+   ```
+
+### Vercel
+1. Link the project to Vercel:
+   ```bash
+   vercel link
+   ```
+2. Deploy the project:
+   ```bash
+   vercel --prod
+   ```
+
 ## 🔄 Процесс работы
 
 1. **Регистрация участников**
