@@ -51,10 +51,21 @@ let nextSpinTime = null;
 function scheduleNextSpin() {
   const now = new Date();
   const next = new Date(now);
-  next.setMinutes(0,0,0,0);
-  next.setHours(now.getHours() + 1);
+  next.setHours(20, 0, 0, 0); // 20:00:00 сегодня
+  if (now >= next) {
+    next.setDate(next.getDate() + 1);
+  }
   nextSpinTime = next;
-  setTimeout(scheduleNextSpin, next - now);
+  setTimeout(async () => {
+    try {
+      const runLottery = require('./services/lottery');
+      await runLottery();
+      console.log('Авто-розыгрыш завершён!');
+    } catch (e) {
+      console.error('Ошибка авто-розыгрыша:', e);
+    }
+    scheduleNextSpin();
+  }, next - now);
 }
 // Initialize next spin schedule
 scheduleNextSpin();
